@@ -44,6 +44,15 @@ description: '커밋 요청 시 git diff 기반 코드 리뷰를 선행하고, �
 - 함수/메서드 길이 과도 여부
 - 네이밍 일관성
 
+### Spring Boot Specific Review (if applicable)
+
+- Transaction boundary correctness (@Transactional usage)
+- Event listener phase correctness (AFTER_COMMIT safety)
+- Concurrency / race condition risks
+- DB performance / N+1 / index requirement
+- Exception handling consistency
+- Logging of sensitive data
+
 ---
 
 ## 3. Review Output Format
