@@ -16,17 +16,17 @@ Apply when user says:
 
 ## Inputs (Mandatory)
 
-1. WBS 모달 텍스트 (권장)
-   - WBS 코드: WBS-<number>
-   - 제목: 보통 첫 줄
-2. git diff (가능하면)
-   - staged 있으면 `git diff --staged`
-   - 아니면 `git diff`
+1. WBS modal text (recommended)
+   - WBS code: WBS-<number>
+   - Title: usually the first line
+2. git diff (when available)
+   - If staged changes exist: `git diff --staged`
+   - Otherwise: `git diff`
 
-If WBS 텍스트가 없으면:
+If no WBS text is provided:
 
-- "WBS 모달 텍스트 붙여줘. 없으면 WBS 코드만이라도, 그것도 없으면 '없음'이라고 알려주세요." 라고 요청한다. (사용자 입력을 기다린다.)
-  Never invent a WBS code.
+- Ask the user: "WBS 모달 텍스트 붙여줘. 없으면 WBS 코드만이라도, 그것도 없으면 '없음'이라고 알려주세요." and wait for user input.
+- Never invent a WBS code.
 
 ## Step 1) Parse WBS (source of truth)
 
@@ -71,6 +71,8 @@ If WBS 텍스트가 없으면:
 
 ## Step 4) Output format (must)
 
+Output the review in the following format (in Korean):
+
 ### 🔍 변경 요약
 
 - ...
@@ -89,23 +91,23 @@ If WBS 텍스트가 없으면:
 
 ## Step 4 → Step 5 Branching Rule
 
-### "리뷰 통과" (Review Passed)
+### Review Passed
 
 - Proceed to Step 5.
 
-### "수정 필요" (Changes Required)
+### Changes Required
 
 - Do NOT generate commit messages.
-- Show the review output (Step 4) and instruct: "Fix the issues above, then ask me to commit again."
+- Show the review output (Step 4) and instruct: "위 이슈를 수정한 뒤 다시 커밋을 요청해주세요."
 - If the user explicitly says "ignore and commit anyway", proceed to Step 5.
 
-### "커밋 분리 권장" (Split Recommended)
+### Split Recommended
 
 - Follow the Commit Split Guide in Step 2 before proceeding to Step 5 for each unit.
 
 ## Step 5) Commit Message Generation (must)
 
-- Read `templates/commit-message-template.md` if present and follow it as source of truth.
+- Read `templates/commit-msg-template.md` if present and follow it as source of truth.
 - If template file is not present, use the built-in company template below.
 - Generate exactly 3 candidates.
 - Do not run git commands.
