@@ -25,7 +25,7 @@ Apply when user says:
 
 If WBS 텍스트가 없으면:
 
-- "WBS 모달 텍스트 붙여줘. 없으면 WBS 코드만이라도 줘(없으면 N/A 가능)" 라고 요청한다.
+- "WBS 모달 텍스트 붙여줘. 없으면 WBS 코드만이라도, 그것도 없으면 '없음'이라고 알려주세요." 라고 요청한다. (사용자 입력을 기다린다.)
   Never invent a WBS code.
 
 ## Step 1) Parse WBS (source of truth)
@@ -90,14 +90,17 @@ If WBS 텍스트가 없으면:
 ## Step 4 → Step 5 Branching Rule
 
 ### "리뷰 통과" (Review Passed)
+
 - Proceed to Step 5.
 
 ### "수정 필요" (Changes Required)
+
 - Do NOT generate commit messages.
 - Show the review output (Step 4) and instruct: "Fix the issues above, then ask me to commit again."
 - If the user explicitly says "ignore and commit anyway", proceed to Step 5.
 
 ### "커밋 분리 권장" (Split Recommended)
+
 - Follow the Commit Split Guide in Step 2 before proceeding to Step 5 for each unit.
 
 ## Step 5) Commit Message Generation (must)
