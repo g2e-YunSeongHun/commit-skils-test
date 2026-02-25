@@ -1,6 +1,6 @@
 ---
-name: review-and-commit-msg
-description: 'WBS 작업 번호를 입력받고, git diff 기반으로 변경사항을 요약/리뷰한 뒤 회사 템플릿에 맞는 커밋 메시지 3개를 생성한다.'
+name: commit
+description: '커밋 메시지 생성. git diff 리뷰 후 회사 템플릿 기반 커밋 메시지 3개 제안. (WBS 번호 필요)'
 ---
 
 # Review + Commit Message Automation (Company Base)
@@ -116,6 +116,7 @@ Output the review in the following format (in Korean):
 
 Context:
 
+- fallback Test.
 - WBS 작업 번호: <WBS number or N/A>
 
 Change:
