@@ -29,7 +29,7 @@ If no WBS number is provided:
 
 ## Step 1) Parse WBS (source of truth)
 
-- Use the WBS number provided by the user as-is (숫자만, 예: 1234)
+- Use the WBS number provided by the user and format as WBS-<number> (예: 1234 → WBS-1234)
 - If user provided "없음" or no number, set WBS to "N/A"
 
 ## Step 2) Inspect changes (diff-driven)
@@ -116,8 +116,7 @@ Output the review in the following format (in Korean):
 
 Context:
 
-- fallback Test.
-- WBS 작업 번호: <WBS number or N/A>
+- <WBS-number | N/A>
 
 Change:
 
@@ -126,10 +125,6 @@ Change:
 Impact:
 
 - <risk / migration notes>
-
-Refs:
-
-- <WBS number or N/A>
 
 ## Step 6) User Selection & Commit Execution
 
