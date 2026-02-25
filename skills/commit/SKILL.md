@@ -105,8 +105,9 @@ Output the review in the following format (in Korean):
 
 ## Step 5) Commit Message Generation (must)
 
-- Read `templates/commit-msg-template.md` if present and follow it as source of truth.
-- If template file is not present, use the built-in company template below.
+- First, try to read `templates/commit-msg-template.md` from the skill directory (do not ask for permission, just check).
+- If found: use it as the source of truth for commit message format.
+- If not found: use the built-in company template below.
 - Generate exactly 3 candidates.
 - Do not run git commands.
 
