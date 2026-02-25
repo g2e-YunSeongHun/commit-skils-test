@@ -1,6 +1,6 @@
 ---
 name: review-and-commit-msg
-description: 'WBS 모달 텍스트를 입력받고, git diff 기반으로 변경사항을 요약/리뷰한 뒤 회사 템플릿에 맞는 커밋 메시지 3개를 생성한다.'
+description: 'WBS 작업 번호를 입력받고, git diff 기반으로 변경사항을 요약/리뷰한 뒤 회사 템플릿에 맞는 커밋 메시지 3개를 생성한다.'
 ---
 
 # Review + Commit Message Automation (Company Base)
@@ -16,23 +16,21 @@ Apply when user says:
 
 ## Inputs (Mandatory)
 
-1. WBS modal text (recommended)
-   - WBS code: WBS-<number>
-   - Title: usually the first line
+1. WBS 작업 번호 (recommended)
+   - 숫자만 입력 (예: 1234)
 2. git diff (when available)
    - If staged changes exist: `git diff --staged`
    - Otherwise: `git diff`
 
-If no WBS text is provided:
+If no WBS number is provided:
 
-- Ask the user: "WBS 모달 텍스트 붙여줘. 없으면 WBS 코드만이라도, 그것도 없으면 '없음'이라고 알려주세요." and wait for user input.
-- Never invent a WBS code.
+- Ask the user: "WBS 작업 번호 입력해주세요 (숫자만, 예: 1234). 없으면 '없음'이라고 알려주세요." and wait for user input.
+- Never invent a WBS number.
 
 ## Step 1) Parse WBS (source of truth)
 
-- Extract WBS code by regex: `WBS-\d+`
-- Extract title: first non-empty line near the top (usually first line)
-- If multiple WBS codes appear (next/prev links), pick the one that matches the current item (heuristic: the code near the title/status block).
+- Use the WBS number provided by the user as-is (숫자만, 예: 1234)
+- If user provided "없음" or no number, set WBS to "N/A"
 
 ## Step 2) Inspect changes (diff-driven)
 
@@ -118,7 +116,7 @@ Output the review in the following format (in Korean):
 
 Context:
 
-- <WBS Title> (<WBS Code or N/A>)
+- WBS 작업 번호: <WBS number or N/A>
 
 Change:
 
@@ -130,7 +128,7 @@ Impact:
 
 Refs:
 
-- <WBS Code or N/A>
+- <WBS number or N/A>
 
 ## Step 6) User Selection & Commit Execution
 

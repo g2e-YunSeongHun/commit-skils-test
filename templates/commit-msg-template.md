@@ -4,7 +4,7 @@
 
 Context:
 
-- <WBS Title> (WBS-XXX)
+- WBS 작업 번호: <숫자 or N/A>
 
 Change:
 
@@ -16,7 +16,7 @@ Impact:
 
 Refs:
 
-- <WBS-XXX or N/A>
+- <숫자 or N/A>
 
 Emoji Mapping:
 
@@ -42,4 +42,4 @@ Rules:
 
 - Emoji must match the mapping above
 - Subject <= 50 chars
-- Refs must include WBS code if exists
+- Refs must include WBS 작업 번호 (숫자) if exists
