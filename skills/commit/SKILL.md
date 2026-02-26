@@ -1,6 +1,6 @@
 ---
 name: commit
-description: '커밋 메시지 생성. git diff 리뷰 후 회사 템플릿 기반 커밋 메시지 3개 제안. (WBS 번호 필요)'
+description: 'Use this skill when user mentions "commit", "커밋", "커밋해줘", "커밋 메시지", "git commit" or wants to create a commit message. Reviews git diff and generates structured commit message following company template with WBS task selection support.'
 ---
 
 # Review + Commit Message Automation (Company Base)
@@ -12,8 +12,8 @@ Use this skill when the user intends to create a git commit and/or wants commit 
 - 커밋해줘 / 커밋 쳐줘 / 커밋 올려줘
 - 커밋 메시지 만들어줘 / 커밋메시지 / 커밋 메세지(오타 포함)
 - git commit / commit message / 커밋 메시지 추천
-- “WBS 1234로 커밋” 같이 WBS+커밋을 같이 언급
-- “메시지만” (커밋 실행 없이 메시지 3개만)
+- "WBS 1234로 커밋" 같이 WBS+커밋을 같이 언급
+- "메시지만" (커밋 실행 없이 메시지 1개만)
 
 Non-trigger:
 
