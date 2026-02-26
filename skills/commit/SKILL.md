@@ -1,178 +1,290 @@
 ---
 name: commit
-description: 'Reviews git diff and generates structured commit messages following company template with WBS selection. Use when creating commits, writing commit messages, reviewing changes before commit, git commit workflow, want commit message suggestions. Keywords: commit, 커밋, 커밋해줘, 커밋 메시지, git commit, commit message, 커밋 올려줘, 커밋 쳐줘, 메시지만, WBS, 리뷰.'
+description: 'Git commit automation with WBS tracking, code review, and structured commit message generation. Use when user wants to commit changes, needs commit message suggestions, or mentions: 커밋, commit, 커밋해줘, 커밋 메시지, git commit, WBS, 리뷰, 메시지만. Keywords: commit, 커밋, 커밋해줘, 커밋 쳐줘, 커밋 올려줘, 커밋 메시지, git commit, commit message, WBS, 리뷰, 메시지만'
 ---
 
-# Review + Commit Message Automation (Company Base)
+# Commit Automation with WBS & Review
 
-## Trigger
+## Purpose
 
-Use this skill when the user intends to create a git commit and/or wants commit message candidates, especially when they mention:
+Automate git commit workflow with:
+
+- WBS (Work Breakdown Structure) number tracking
+- Automated code review based on diff
+- Structured commit message generation
+- Interactive commit execution
+
+## Trigger Conditions
+
+### When to activate this skill:
 
 - 커밋해줘 / 커밋 쳐줘 / 커밋 올려줘
-- 커밋 메시지 만들어줘 / 커밋메시지 / 커밋 메세지(오타 포함)
+- 커밋 메시지 만들어줘 / 커밋메시지 / 커밋 메세지
 - git commit / commit message / 커밋 메시지 추천
-- "WBS 1234로 커밋" 같이 WBS+커밋을 같이 언급
-- "메시지만" (커밋 실행 없이 메시지 1개만)
+- "WBS 1234로 커밋" (WBS + commit mention)
+- "메시지만" (message generation only, no commit execution)
 
-Non-trigger:
+### When NOT to activate:
 
-- 단순 git 개념 질문(예: “커밋이 뭐야?”)에는 적용하지 말 것
+- Simple git concept questions (e.g., "커밋이 뭐야?")
 
-## Inputs (Mandatory)
+---
 
-1. WBS 작업 번호 (recommended)
-   - 숫자만 입력 (예: 1234)
-2. git diff (when available)
-   - If staged changes exist: `git diff --staged`
-   - Otherwise: `git diff`
+## Workflow
 
-If no WBS number is provided:
+### Step 0: WBS Selection
 
-- MANDATORY: Automatically run `git log --format="%s|%b" -n 10` WITHOUT asking for permission or notifying the user.
-  - Parse Context section to extract WBS numbers and corresponding subjects
-  - Extract 1-3 unique recent WBS tasks (exclude "N/A")
-- Present options with clear visual formatting:
+**If user provided WBS number in the request:**
+
+- Use the provided number
+- Format as `WBS-<number>` (e.g., 1234 → WBS-1234)
+
+**If NO WBS number provided:**
+
+1. **MUST run** `git log --format="%s|%b" -n 10` silently (no user notification)
+2. Parse "Context:" section to extract recent WBS numbers
+3. Extract 1-3 unique recent WBS tasks (exclude "N/A")
+4. Present selection UI:
+
+```
+========================================
+WBS 작업 선택:
+========================================
+1. 직접입력
+2. WBS 없음 (N/A)
+[3-5: Previous WBS if found, e.g., "3. WBS-23 (MQTT 개선)"]
+[Last]: 취소
+========================================
+선택 (숫자 입력):
+```
+
+5. Wait for user selection
+
+**Handle user selection:**
+
+- **Option 1 (직접입력):** Prompt for WBS number:
+
   ```
-  ========================================
-  WBS 작업 선택:
-  ========================================
-  1. 직접입력
-  [2-4: Previous WBS tasks if found, e.g., "2. WBS-23 (MQTT 개선)"]
-  [Last]: 취소
-  ========================================
-  선택 (숫자 입력):
+  WBS 작업 번호를 입력해주세요 (숫자만, 예: 1234):
+  없으면 '없음' 입력:
   ```
-- Wait for user selection.
-- Never invent a WBS number.
 
-## Step 1) Parse WBS (source of truth)
+  - If "없음" or empty → set WBS to "N/A"
+  - Otherwise → format as `WBS-<number>`
 
-- If user selected "직접입력":
-  - Ask with clear formatting:
-    ```
-    WBS 작업 번호를 입력해주세요 (숫자만, 예: 1234):
-    없으면 '없음' 입력:
-    ```
-- If user selected a previous task: use that WBS number
-- If user selected "취소": exit without proceeding
-- Format WBS as WBS-<number> (예: 1234 → WBS-1234)
-- If user provided "없음" or no number, set WBS to "N/A"
+- **Option 2 (WBS 없음):** Set WBS to "N/A" and proceed
 
-## Step 2) Inspect changes (diff-driven)
+- **Options 3-5 (Previous WBS):** Use the selected WBS number as-is
 
-- Summarize `git status -sb`
-- Read diffs:
-  - Prefer: `git diff --staged`
-  - Else: `git diff`
-- Summarize "What changed" in 3–5 lines.
-- If changes look unrelated, suggest splitting into multiple commits (backend vs frontend, refactor vs feature, formatting vs logic, deps vs behavior).
+- **Last (취소):** Exit workflow without proceeding
 
-### Commit Split Guide (when split is suggested)
+**Important:** Never invent or guess WBS numbers.
 
-- Clearly explain the split criteria and reasoning (e.g., "API changes" and "UI fixes" should be separate commits).
-- List the files belonging to each commit unit.
-- On user approval:
-  - Stage the first unit via `git add <files>` → review → generate commit message → commit.
-  - Proceed with the next unit in the same manner.
-- If the user says "just do it all at once", skip splitting and proceed as a single commit.
+---
 
-### Diff Scope Rule (Mandatory)
+### Step 1: Inspect Changes
 
-- Review must focus strictly on lines added/removed in the current diff.
-- Only inspect minimal surrounding context needed to understand impact.
-- Do NOT audit unrelated existing code.
-- Ignore legacy technical debt not introduced by this change.
+1. **MUST run** `git status -sb` to get branch and file status
+2. **MUST run** diff commands:
+   - First try: `git diff --staged`
+   - If empty, try: `git diff`
+3. Summarize changes in 3-5 lines (what files changed, what kind of changes)
 
-## Step 3) Review (Company Common Checklist)
+**Commit Split Detection:**
+If changes span multiple unrelated domains, suggest splitting:
 
-### Common checks (always)
+- Backend vs Frontend
+- Feature vs Refactor
+- Logic vs Formatting
+- Dependencies vs Business code
 
-- Potential bugs: null/edge cases, error handling, broken logic
-- Debug leftovers: console/log/print, TODO/FIXME
-- Security: secrets/tokens, sensitive data in logs
-- Quality: duplication, naming, overly large functions/files
-- Unintended changes: unrelated formatting churn, stray files, generated artifacts
+**If split is recommended:**
 
-## Step 4) Output format (must)
+1. Explain split criteria and reasoning
+2. List files for each commit unit
+3. Wait for user approval
+4. On approval:
+   - Stage first unit → `git add <files>`
+   - Continue with Step 2-6 for first unit
+   - Repeat for remaining units
+5. If user says "just do it all at once" → proceed as single commit
 
-Output the review in the following format (in Korean):
+---
 
+### Step 2: Code Review
+
+**Diff Scope Rule (Mandatory):**
+
+- Review ONLY lines added/removed in the current diff
+- Inspect minimal surrounding context
+- Do NOT audit unrelated existing code
+- Ignore legacy technical debt not introduced by this change
+
+**Review Checklist:**
+
+1. **Potential bugs:**
+   - Null/undefined handling
+   - Edge cases
+   - Error handling
+   - Broken logic
+
+2. **Debug leftovers:**
+   - console.log / print / System.out.println
+   - TODO / FIXME comments
+
+3. **Security issues:**
+   - Hard-coded secrets/tokens
+   - Sensitive data in logs
+   - SQL injection / XSS vulnerabilities
+
+4. **Code quality:**
+   - Code duplication
+   - Poor naming
+   - Overly large functions/files
+
+5. **Unintended changes:**
+   - Unrelated formatting changes
+   - Stray files
+   - Generated artifacts (build outputs, lock files if not intended)
+
+---
+
+### Step 3: Review Output
+
+Present review results in Korean using this format:
+
+```markdown
 ### 🔍 변경 요약
 
-- ...
+- [Brief summary of changes]
 
-### ⚠ 리스크 / 주의점
+### ⚠️ 리스크 / 주의점
 
-- ...
+- [Identified risks or concerns, or "없음" if none]
 
-### 🛠 개선 제안
+### 🛠️ 개선 제안
 
-- 파일/라인 중심으로 구체적으로
+- [Specific suggestions with file:line references, or "없음" if none]
 
 ### ✅ 결론
 
-- 리뷰 통과 / 수정 필요 / 커밋 분리 권장
+- [리뷰 통과 | 수정 필요 | 커밋 분리 권장]
+```
 
-## Step 4 → Step 5 Branching Rule
+---
 
-### Review Passed
+### Step 4: Review Decision Branch
 
-- Proceed to Step 5.
+**If review result = "리뷰 통과":**
 
-### Changes Required
+- Proceed to Step 5
 
-- Do NOT generate commit messages.
-- Show the review output (Step 4) and instruct: "위 이슈를 수정한 뒤 다시 커밋을 요청해주세요."
-- If the user explicitly says "ignore and commit anyway", proceed to Step 5.
+**If review result = "수정 필요":**
 
-### Split Recommended
+- Do NOT generate commit message
+- Show review output and instruct: "위 이슈를 수정한 뒤 다시 커밋을 요청해주세요."
+- If user explicitly says "ignore and commit anyway" → proceed to Step 5
 
-- Follow the Commit Split Guide in Step 2 before proceeding to Step 5 for each unit.
+**If review result = "커밋 분리 권장":**
 
-## Step 5) Commit Message Generation (must)
+- Follow Commit Split Guide from Step 1
+- Process each unit through Steps 2-6 separately
 
-- First, try to read `templates/commit-msg-template.md` from the skill directory (do not ask for permission, just check).
-- If found: use it as the source of truth for commit message format.
-- If not found: use the built-in company template below.
-- Generate exactly 1 best candidate.
-- Do not run git commands.
+---
 
-### Built-in company template (fallback)
+### Step 5: Generate Commit Message
 
+1. **MUST attempt to read** `templates/commit-msg-template.md` from skill directory
+   - No user notification, silent check
+   - If found → use as commit message template
+   - If not found → use built-in template below
+
+2. Generate exactly **1 commit message** (best candidate only)
+
+3. Do NOT run any git commands in this step
+
+**Built-in Template (Fallback):**
+
+```
 <emoji> <subject>
 
 Context:
-
 - <WBS-number | N/A>
 
 Change:
-
-- <2-4 bullets derived from diff>
+- <2-4 bullet points derived from diff>
 
 Impact:
+- <risk notes, migration steps, or "없음">
+```
 
-- <risk / migration notes>
+**Template Guidelines:**
 
-## Step 6) User Selection & Commit Execution
+- `<emoji>`: ✨ feature, 🔨 refactor, 🐛 fix, 📝 docs, etc.
+- `<subject>`: Concise summary (Korean or English)
+- `Change`: What was changed (derived from diff)
+- `Impact`: User-facing or system impact (if any)
 
-- Present the 1 generated commit message to the user with clear visual formatting:
-  ```
-  ========================================
-  제안된 커밋 메시지:
-  ========================================
-  [Display the commit message]
-  ========================================
-  1. 제안된 커밋 사용
-  2. 제안된 커밋 수정
-  3. 취소
-  ========================================
-  선택 (1-3):
-  ```
-- On selection:
-  - Option 1: Proceed to commit
-    - If staged files exist → `git commit -m "..."`
-    - If nothing is staged → show `git add` targets and confirm with the user before committing.
-  - Option 2: Ask the user "수정할 내용을 입력해주세요 (전체 커밋 메시지 또는 수정 지시):", then commit with the modified message.
-  - Option 3: Cancel and exit without committing.
-- If the trigger was "메시지만" → skip this step entirely (message generation only).
+---
+
+### Step 6: Commit Execution
+
+**If trigger was "메시지만":**
+
+- Display generated message and EXIT (skip commit execution)
+
+**Otherwise, present commit UI:**
+
+```
+========================================
+제안된 커밋 메시지:
+========================================
+[Display the generated commit message here]
+========================================
+1. 제안된 커밋 사용
+2. 제안된 커밋 수정
+3. 취소
+========================================
+선택 (1-3):
+```
+
+**Handle user selection:**
+
+- **Option 1 (제안된 커밋 사용):**
+  - Check if files are staged: `git diff --staged --name-only`
+  - If staged files exist → **run** `git commit -m "..."`
+  - If nothing staged → list unstaged files, ask user which to add, then **run** `git add <files>` → `git commit -m "..."`
+
+- **Option 2 (제안된 커밋 수정):**
+  - Prompt: "수정할 내용을 입력해주세요 (전체 커밋 메시지 또는 수정 지시):"
+  - Wait for user input
+  - Apply modifications to commit message
+  - Commit with modified message
+
+- **Option 3 (취소):**
+  - Exit without committing
+
+---
+
+## Refinement Notes
+
+**Why this design:**
+
+1. **WBS tracking:** Company workflow requires linking commits to WBS tasks
+2. **Automatic WBS suggestion:** Reduces friction by suggesting recent WBS numbers
+3. **Mandatory review:** Prevents shipping debug code, secrets, or bugs
+4. **Template flexibility:** Projects can override with custom templates
+5. **Interactive selection:** Gives user control at each decision point
+6. **"메시지만" mode:** Useful for learning or preparing messages before committing
+
+**Tool usage patterns:**
+
+- Silent execution for context gathering (git log)
+- Explicit user prompts for decisions (WBS selection, commit execution)
+- Structured output formats for consistency
+
+**Error handling:**
+
+- Never proceed if review fails (unless user overrides)
+- Never invent WBS numbers
+- Always confirm before staging/committing files
