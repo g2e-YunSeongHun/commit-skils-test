@@ -45,10 +45,11 @@ Automate git commit workflow with:
 
 **If NO WBS number provided:**
 
-1. **MUST run** `git log --format="%s|%b" -n 10` silently (no user notification)
-2. Parse "Context:" section to extract recent WBS numbers
-3. Extract 1-3 unique recent WBS tasks (exclude "N/A")
-4. Present selection UI:
+1. **Read file** `.git/COMMIT_EDITMSG` to get the most recent commit message
+2. Parse "Context:" section to extract WBS number from the most recent commit
+3. Extract the commit subject (first line) as the task description
+4. If WBS found (not "N/A"), prepare it as the previous WBS option with format: "WBS-XX (commit subject)"
+5. Present selection UI:
 
 ```
 ========================================
@@ -56,13 +57,13 @@ WBS 작업 선택:
 ========================================
 1. 직접입력
 2. WBS 없음 (N/A)
-[3-5: Previous WBS if found, e.g., "3. WBS-23 (MQTT 개선)"]
-[Last]: 취소
+[3: Previous WBS if found, e.g., "3. WBS-48 (WBS 번호 자동 인식 시 선택 UI 건너뛰기 + 한국어 응답 강제)"]
+4. 취소
 ========================================
 선택 (숫자 입력):
 ```
 
-5. Wait for user selection
+6. Wait for user selection
 
 **Handle user selection:**
 
@@ -78,9 +79,9 @@ WBS 작업 선택:
 
 - **Option 2 (WBS 없음):** Set WBS to "N/A" and proceed
 
-- **Options 3-5 (Previous WBS):** Use the selected WBS number as-is
+- **Option 3 (Previous WBS):** Use the previous WBS number extracted from `.git/COMMIT_EDITMSG`
 
-- **Last (취소):** Exit workflow without proceeding
+- **Option 4 (취소):** Exit workflow without proceeding
 
 **Important:** Never invent or guess WBS numbers.
 
