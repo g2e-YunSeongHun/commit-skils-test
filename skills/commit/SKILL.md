@@ -36,7 +36,8 @@ Automate git commit workflow with:
 
 **If user provided WBS number in the request:**
 
-- Use the provided number
+- Parse patterns: "WBS 123", "WBS-123", "123으로 커밋", "커밋 123", "/commit 123"
+- Extract the number from the request
 - Format as `WBS-<number>` (e.g., 1234 → WBS-1234)
 
 **If NO WBS number provided:**
