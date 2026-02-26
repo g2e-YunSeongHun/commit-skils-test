@@ -1,6 +1,6 @@
 ---
 name: commit
-description: 'Git commit automation with WBS tracking, code review, and structured commit message generation. Use when user wants to commit changes, needs commit message suggestions, or mentions: 커밋, commit, 커밋해줘, 커밋 메시지, git commit, WBS, 리뷰, 메시지만. Keywords: commit, 커밋, 커밋해줘, 커밋 쳐줘, 커밋 올려줘, 커밋 메시지, git commit, commit message, WBS, 리뷰, 메시지만'
+description: 'Automates git commits with WBS tracking and code review. Use when user wants to commit changes or needs commit message suggestions. Keywords: commit, 커밋, 커밋해줘, 커밋 메시지, git commit, WBS, 리뷰'
 ---
 
 # Commit Automation with WBS & Review
@@ -34,6 +34,8 @@ Automate git commit workflow with:
 
 ## Workflow
 
+**Performance Note:** Cache git command results throughout the workflow. Do not re-run `git status`, `git diff`, or `git log` if already executed in previous steps.
+
 ### Step 0: WBS Selection
 
 **If user provided WBS number in the request:**
@@ -62,7 +64,7 @@ WBS 작업 선택:
 ========================================
 1. 직접입력
 2. WBS 없음 (N/A)
-[3: Previous WBS if found, e.g., "3. WBS-48 (WBS 번호 자동 인식 시 선택 UI 건너뛰기 + 한국어 응답 강제)"]
+[3: Previous WBS if found, e.g., "3. WBS-48 (이전 커밋 제목)"]
 4. 취소
 ========================================
 선택 (숫자 입력):
@@ -89,7 +91,7 @@ WBS 작업 선택:
 
 - **Option 2 (WBS 없음):** Set WBS to "N/A" and proceed
 
-- **Option 3 (Previous WBS):** Use the previous WBS number extracted from `.git/COMMIT_EDITMSG`
+- **Option 3 (Previous WBS):** Use the previous WBS number extracted from git log
 
 - **Option 4 (취소):** Exit workflow without proceeding
 
@@ -98,8 +100,6 @@ WBS 작업 선택:
 ---
 
 ### Step 1: Inspect Changes
-
-**Performance Note:** Cache git command results throughout the workflow. Do not re-run `git status`, `git diff`, or `git log` if already executed in previous steps.
 
 1. **MUST run** `git status -sb` to get branch and file status
 2. **MUST run** diff commands:
