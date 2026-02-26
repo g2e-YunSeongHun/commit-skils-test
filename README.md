@@ -4,9 +4,9 @@
 
 ## Available Skills
 
-| 스킬                    | 설명                                                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `review-and-commit-msg` | WBS 모달 텍스트를 입력받고, git diff 기반으로 변경사항을 요약/리뷰한 뒤 템플릿에 맞는 커밋 메시지 3개를 생성한다. |
+| 스킬     | 설명                                                                              |
+| -------- | --------------------------------------------------------------------------------- |
+| `commit` | 커밋 메시지 생성. git diff 리뷰 후 회사 템플릿 기반 커밋 메시지 3개 제안. (WBS 번호 필요) |
 
 ## Skills CLI Commands
 
@@ -27,5 +27,5 @@
 npx skills add g2e-YunSeongHun/commit-skils-test
 
 # 특정 스킬만 설치
-npx skills add g2e-YunSeongHun/commit-skils-test --skill review-and-commit-msg
+npx skills add g2e-YunSeongHun/commit-skils-test --skill commit
 ```
