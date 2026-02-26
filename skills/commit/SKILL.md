@@ -214,37 +214,14 @@ Present review results in Korean using this format:
 
 **PRE-CHECK: Ensure WBS number has been set in Step 0 (including "N/A" for no WBS). If not set at all, return to Step 0 for user selection.**
 
-1. **MUST attempt to read** `templates/commit-msg-template.md` from skill directory
+1. **MUST read** `templates/commit-msg-template.md` from skill directory
+   - This file contains the commit message format, emoji mapping, and all template rules
    - No user notification, silent check
-   - If found → use as commit message template
-   - If not found → use built-in template below
+   - Follow the template structure and emoji mapping exactly as defined in the file
 
 2. Generate exactly **1 commit message** (best candidate only)
 
 3. Do NOT run any git commands in this step
-
-**Built-in Template (Fallback):**
-
-```
-<emoji> <subject>
-
-Context:
-- <WBS-number(s) | N/A>
-  (e.g., WBS-1234 or WBS-13, WBS-14 for multiple)
-
-Change:
-- <2-4 bullet points derived from diff>
-
-Impact:
-- <risk notes, migration steps, or "없음">
-```
-
-**Template Guidelines:**
-
-- `<emoji>`: ✨ feature, 🔨 refactor, 🐛 fix, 📝 docs, etc.
-- `<subject>`: Concise summary (Korean or English)
-- `Change`: What was changed (derived from diff)
-- `Impact`: User-facing or system impact (if any)
 
 ---
 
