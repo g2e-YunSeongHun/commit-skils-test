@@ -1,6 +1,6 @@
 ---
 name: commit
-description: 'Use this skill when user mentions "commit", "커밋", "커밋해줘", "커밋 메시지", "git commit" or wants to create a commit message. Reviews git diff and generates structured commit message following company template with WBS task selection support.'
+description: 'Reviews git diff and generates structured commit messages following company template with WBS selection. Use when creating commits, writing commit messages, reviewing changes before commit, git commit workflow, want commit message suggestions. Keywords: commit, 커밋, 커밋해줘, 커밋 메시지, git commit, commit message, 커밋 올려줘, 커밋 쳐줘, 메시지만, WBS, 리뷰.'
 ---
 
 # Review + Commit Message Automation (Company Base)
