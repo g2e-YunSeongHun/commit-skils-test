@@ -38,14 +38,19 @@ Automate git commit workflow with:
 
 **If user provided WBS number in the request:**
 
-- Parse patterns: "WBS 123", "WBS-123", "123으로 커밋", "커밋 123", "/commit 123"
-- Extract the number from the request
-- Format as `WBS-<number>` (e.g., 1234 → WBS-1234)
-- **IMPORTANT:** Skip selection UI and proceed directly to Step 1 with the extracted WBS number
+- Parse patterns:
+  - Single: "WBS 123", "WBS-123", "123으로 커밋", "커밋 123", "/commit 123"
+  - Multiple: "13, 14로 커밋", "커밋 13 14", "/commit 13, 14"
+- Extract number(s) from the request:
+  - Single number → format as `WBS-<number>` (e.g., 1234 → WBS-1234)
+  - Multiple numbers → split by comma/space, format each, join with ", " (e.g., "13, 14" → WBS-13, WBS-14)
+- **IMPORTANT:** Skip selection UI and proceed directly to Step 1 with the extracted WBS number(s)
 
 **If NO WBS number provided:**
 
-1. **Read file** `.git/COMMIT_EDITMSG` to get the most recent commit message
+1. **Run** `git log -1 --pretty=%B` to get the most recent commit message
+   - This is more reliable than reading `.git/COMMIT_EDITMSG` (works correctly during amend/rebase)
+   - If this fails, fallback to reading `.git/COMMIT_EDITMSG`
 2. Parse "Context:" section to extract WBS number from the most recent commit
 3. Extract the commit subject (first line) as the task description
 4. If WBS found (not "N/A"), prepare it as the previous WBS option with format: "WBS-XX (commit subject)"
@@ -63,19 +68,24 @@ WBS 작업 선택:
 선택 (숫자 입력):
 ```
 
-6. Wait for user selection
+6. **MANDATORY:** Wait for user selection. Do NOT auto-select or assume any option based on previous commits.
 
 **Handle user selection:**
 
 - **Option 1 (직접입력):** Prompt for WBS number:
 
   ```
-  WBS 작업 번호를 입력해주세요 (숫자만, 예: 1234):
-  없으면 '없음' 입력:
+  WBS 작업 번호를 입력해주세요:
+  - 단일: 1234
+  - 여러 개: 13, 14 또는 13 14
+  - 없음: '없음' 입력
   ```
 
   - If "없음" or empty → set WBS to "N/A"
-  - Otherwise → format as `WBS-<number>`
+  - Otherwise → parse input:
+    - Split by comma or space (e.g., "13, 14" or "13 14")
+    - Format each as `WBS-<number>`
+    - Join with ", " → `WBS-13, WBS-14`
 
 - **Option 2 (WBS 없음):** Set WBS to "N/A" and proceed
 
@@ -88,6 +98,8 @@ WBS 작업 선택:
 ---
 
 ### Step 1: Inspect Changes
+
+**Performance Note:** Cache git command results throughout the workflow. Do not re-run `git status`, `git diff`, or `git log` if already executed in previous steps.
 
 1. **MUST run** `git status -sb` to get branch and file status
 2. **MUST run** diff commands:
@@ -124,6 +136,7 @@ If changes span multiple unrelated domains, suggest splitting:
 - Inspect minimal surrounding context
 - Do NOT audit unrelated existing code
 - Ignore legacy technical debt not introduced by this change
+- Do NOT suggest architectural refactors unrelated to this diff
 
 **Review Checklist:**
 
@@ -199,6 +212,8 @@ Present review results in Korean using this format:
 
 ### Step 5: Generate Commit Message
 
+**PRE-CHECK: Ensure WBS number has been set in Step 0 (including "N/A" for no WBS). If not set at all, return to Step 0 for user selection.**
+
 1. **MUST attempt to read** `templates/commit-msg-template.md` from skill directory
    - No user notification, silent check
    - If found → use as commit message template
@@ -214,7 +229,8 @@ Present review results in Korean using this format:
 <emoji> <subject>
 
 Context:
-- <WBS-number | N/A>
+- <WBS-number(s) | N/A>
+  (e.g., WBS-1234 or WBS-13, WBS-14 for multiple)
 
 Change:
 - <2-4 bullet points derived from diff>
@@ -257,6 +273,7 @@ Impact:
 
 - **Option 1 (제안된 커밋 사용):**
   - Check if files are staged: `git diff --staged --name-only`
+  - **IMPORTANT:** Escape double quotes and special characters in commit message before executing git commit
   - If staged files exist → **run** `git commit -m "..."`
   - If nothing staged → list unstaged files, ask user which to add, then **run** `git add <files>` → `git commit -m "..."`
 

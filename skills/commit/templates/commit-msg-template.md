@@ -4,7 +4,8 @@
 
 Context:
 
-- <WBS-number | N/A>
+- <WBS-number(s) | N/A>
+  (e.g., WBS-1234 or WBS-13, WBS-14 for multiple)
 
 Change:
 
