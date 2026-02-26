@@ -14,6 +14,8 @@ Automate git commit workflow with:
 - Structured commit message generation
 - Interactive commit execution
 
+**IMPORTANT: Always communicate with the user in Korean (한국어) throughout the entire workflow.**
+
 ## Trigger Conditions
 
 ### When to activate this skill:
@@ -39,6 +41,7 @@ Automate git commit workflow with:
 - Parse patterns: "WBS 123", "WBS-123", "123으로 커밋", "커밋 123", "/commit 123"
 - Extract the number from the request
 - Format as `WBS-<number>` (e.g., 1234 → WBS-1234)
+- **IMPORTANT:** Skip selection UI and proceed directly to Step 1 with the extracted WBS number
 
 **If NO WBS number provided:**
 
