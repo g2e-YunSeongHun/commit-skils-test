@@ -56,44 +56,30 @@ Automate git commit workflow with:
 2. Parse "Context:" section to extract WBS number from the most recent commit
 3. Extract the commit subject (first line) as the task description
 4. If WBS found (not "N/A"), prepare it as the previous WBS option with format: "WBS-XX (commit subject)"
-5. Present selection UI:
-
-```
-========================================
-WBS 작업 선택:
-========================================
-1. 직접입력
-2. WBS 없음 (N/A)
-[3: Previous WBS if found, e.g., "3. WBS-48 (이전 커밋 제목)"]
-4. 취소
-========================================
-선택 (숫자 입력):
-```
+5. **MUST use `AskUserQuestion` tool** to present selection UI:
+   - **header:** "WBS 번호"
+   - **question:** "WBS 작업 번호를 입력해주세요. - 단일: 1234 - 여러 개: 13, 14 또는 13 14 - 없음: '없음' 입력"
+   - **Options (in order):**
+     - If previous WBS found: label="`<number>`", description="WBS-`<number>`"
+     - Always: label="없음", description="WBS 없이 진행"
+   - The tool automatically adds "Other" at the bottom — this serves as the **직접입력** option (user can type any WBS number)
 
 6. **MANDATORY:** Wait for user selection. Do NOT auto-select or assume any option based on previous commits.
 
 **Handle user selection:**
 
-- **Option 1 (직접입력):** Prompt for WBS number:
+- **Previous WBS option:** Use the previous WBS number extracted from git log
 
-  ```
-  WBS 작업 번호를 입력해주세요:
-  - 단일: 1234
-  - 여러 개: 13, 14 또는 13 14
-  - 없음: '없음' 입력
-  ```
+- **"없음" option:** Set WBS to "N/A" and proceed
 
+- **"Other" (free text input):** Parse the user's typed input:
   - If "없음" or empty → set WBS to "N/A"
   - Otherwise → parse input:
     - Split by comma or space (e.g., "13, 14" or "13 14")
     - Format each as `WBS-<number>`
     - Join with ", " → `WBS-13, WBS-14`
 
-- **Option 2 (WBS 없음):** Set WBS to "N/A" and proceed
-
-- **Option 3 (Previous WBS):** Use the previous WBS number extracted from git log
-
-- **Option 4 (취소):** Exit workflow without proceeding
+- **User cancels (Esc):** Exit workflow without proceeding
 
 **Important:** Never invent or guess WBS numbers.
 
@@ -231,36 +217,37 @@ Present review results in Korean using this format:
 
 - Display generated message and EXIT (skip commit execution)
 
-**Otherwise, present commit UI:**
+**Otherwise:**
 
-```
-========================================
-제안된 커밋 메시지:
-========================================
-[Display the generated commit message here]
-========================================
-1. 제안된 커밋 사용
-2. 제안된 커밋 수정
-3. 취소
-========================================
-선택 (1-3):
-```
+1. Display the generated commit message in a code block
+2. **MUST use `AskUserQuestion` tool** to present selection:
+   - **header:** "커밋 실행"
+   - **question:** "위 커밋 메시지로 진행할까요?"
+   - **Options:**
+     - label="커밋", description="제안된 메시지로 커밋 실행"
+     - label="수정", description="메시지를 수정한 뒤 커밋"
+     - label="취소", description="커밋하지 않고 종료"
+   - "Other" is automatically added — user can type modified commit message or instructions directly
 
 **Handle user selection:**
 
-- **Option 1 (제안된 커밋 사용):**
+- **"커밋" option:**
   - Check if files are staged: `git diff --staged --name-only`
   - **IMPORTANT:** Escape double quotes and special characters in commit message before executing git commit
   - If staged files exist → **run** `git commit -m "..."`
   - If nothing staged → list unstaged files, ask user which to add, then **run** `git add <files>` → `git commit -m "..."`
 
-- **Option 2 (제안된 커밋 수정):**
+- **"수정" option:**
   - Prompt: "수정할 내용을 입력해주세요 (전체 커밋 메시지 또는 수정 지시):"
   - Wait for user input
   - Apply modifications to commit message
   - Commit with modified message
 
-- **Option 3 (취소):**
+- **"Other" (free text input):**
+  - Treat user input as modification instructions or replacement commit message
+  - Apply modifications and commit
+
+- **"취소" option or Esc:**
   - Exit without committing
 
 ---
