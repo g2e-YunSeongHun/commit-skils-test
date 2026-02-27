@@ -24,8 +24,6 @@ Automate git commit workflow with:
 - 커밋 메시지 만들어줘 / 커밋메시지 / 커밋 메세지
 - git commit / commit message / 커밋 메시지 추천
 - "WBS 1234로 커밋" (WBS + commit mention)
-- "메시지만" (message generation only, no commit execution)
-
 ### When NOT to activate:
 
 - Simple git concept questions (e.g., "커밋이 뭐야?")
@@ -213,11 +211,7 @@ Present review results in Korean using this format:
 
 ### Step 6: Commit Execution
 
-**If trigger was "메시지만":**
-
-- Display generated message and EXIT (skip commit execution)
-
-**Otherwise:**
+**Present commit UI:**
 
 1. Display the generated commit message in a code block
 2. **MUST use `AskUserQuestion` tool** to present selection:
@@ -261,7 +255,6 @@ Present review results in Korean using this format:
 3. **Mandatory review:** Prevents shipping debug code, secrets, or bugs
 4. **Template flexibility:** Projects can override with custom templates
 5. **Interactive selection:** Gives user control at each decision point
-6. **"메시지만" mode:** Useful for learning or preparing messages before committing
 
 **Tool usage patterns:**
 
