@@ -58,11 +58,12 @@ Automate git commit workflow with:
    - **header:** "WBS 번호"
    - **question:** "WBS 작업 번호를 입력해주세요. - 단일: 1234 - 여러 개: 13, 14 또는 13 14 - 없음: '없음' 입력"
    - **Options (in order):**
-     - If previous WBS found: label="`<number>`", description="WBS-`<number>`"
+     - If previous WBS found: label="WBS-`<number>`", description="`<commit subject>`"
      - Always: label="없음", description="WBS 없이 진행"
-   - The tool automatically adds "Other" at the bottom — this serves as the **직접입력** option (user can type any WBS number)
+   - **IMPORTANT:** Label must include "WBS-" prefix (e.g., "WBS-9", not just "9") to prevent numeric key conflicts in terminal UI
+   - The tool automatically adds "Other" at the bottom — this serves as the **직접입력** option
 
-6. **MANDATORY:** Wait for user selection. Do NOT auto-select or assume any option based on previous commits.
+6. **MANDATORY:** Wait for user selection. Do NOT auto-select or assume any option.
 
 **Handle user selection:**
 
