@@ -181,13 +181,42 @@
         font-size: 0.8rem;
         color: var(--text-muted);
         margin-top: 1rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
       }
-      .article-body .summary {
+      .article-summary {
         font-size: 0.92rem;
         color: var(--text);
         line-height: 1.7;
+        margin-bottom: 1rem;
+      }
+      .article-detail {
+        background: var(--surface-alt);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
         margin-bottom: 0.75rem;
+      }
+      .article-detail h4 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+      }
+      .article-detail dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.25rem 0.75rem;
+        font-size: 0.85rem;
+      }
+      .article-detail dt {
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .article-detail dd {
+        color: var(--text-muted);
+      }
+      .article-body .link {
+        margin-top: 0.5rem;
       }
       .article-body .link a {
         color: var(--accent);
@@ -273,7 +302,20 @@
       </summary>
       <div class="article-body">
         <div class="source">{기관/매체} · {관련 기관}</div>
-        <div class="summary">{상세 요약 3~5문장}</div>
+        <div class="article-summary">{기사 요약 — Q0의 기사 요약 부분}</div>
+        <div class="article-detail">
+          <h4>세부 분석</h4>
+          <dl>
+            <dt>관련 기업/기관</dt>
+            <dd>{Q0의 관련 기업/기관 설명}</dd>
+            <dt>기술/제품</dt>
+            <dd>{Q0의 기술/제품 설명}</dd>
+            <dt>핵심 수치</dt>
+            <dd>{Q0의 핵심 수치 — 없으면 이 항목 생략}</dd>
+            <dt>연구 방법/결과</dt>
+            <dd>{Q0의 연구 방법과 결과 — 연구/논문이 아니면 이 항목 생략}</dd>
+          </dl>
+        </div>
         <div class="link">
           <a href="{URL}" target="_blank">원문 보기 →</a>
         </div>
