@@ -254,6 +254,12 @@
       .summary-section p {
         color: var(--text-muted);
       }
+      .empty-notice {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+        font-style: italic;
+      }
       footer {
         text-align: center;
         padding-top: 2rem;
@@ -289,46 +295,14 @@
     <section>
       <h2>국내 기사</h2>
       <div class="article-list">
-        <!-- 기사마다 아래 아코디언을 반복 생성 -->
-        <!--ARTICLE_TEMPLATE:
-    <details class="article">
-      <summary>
-        <span class="title">{제목}</span>
-        <span class="meta">
-          <span class="tag tag-{구분}">{구분}</span>
-          <span class="tag tag-field">{활용분야}</span>
-          <span class="date">{날짜}</span>
-        </span>
-      </summary>
-      <div class="article-body">
-        <div class="source">{기관/매체} · {관련 기관}</div>
-        <div class="article-summary">{기사 요약 — Q0의 기사 요약 부분}</div>
-        <div class="article-detail">
-          <h4>세부 분석</h4>
-          <dl>
-            <dt>관련 기업/기관</dt>
-            <dd>{Q0의 관련 기업/기관 설명}</dd>
-            <dt>기술/제품</dt>
-            <dd>{Q0의 기술/제품 설명}</dd>
-            <dt>핵심 수치</dt>
-            <dd>{Q0의 핵심 수치 — 없으면 이 항목 생략}</dd>
-            <dt>연구 방법/결과</dt>
-            <dd>{Q0의 연구 방법과 결과 — 연구/논문이 아니면 이 항목 생략}</dd>
-          </dl>
-        </div>
-        <div class="link">
-          <a href="{URL}" target="_blank">원문 보기 →</a>
-        </div>
-      </div>
-    </details>
-    -->
+        <!--DOMESTIC_ARTICLES-->
       </div>
     </section>
 
     <section>
       <h2>해외 기사 / 학술 논문</h2>
       <div class="article-list">
-        <!-- 동일한 ARTICLE_TEMPLATE 구조 반복 -->
+        <!--OVERSEAS_ARTICLES-->
       </div>
     </section>
 
@@ -337,14 +311,14 @@
       <div class="summary-section">
         <h3>이번 주 핵심 동향</h3>
         <ul>
-          <li>...</li>
+          <!--SUMMARY_TRENDS-->
         </ul>
         <h3>주목할 기관/기업</h3>
         <ul>
-          <li>...</li>
+          <!--SUMMARY_FEATURED_ORGS-->
         </ul>
         <h3>시사점</h3>
-        <p>...</p>
+        <p><!--SUMMARY_IMPLICATIONS--></p>
       </div>
     </section>
 

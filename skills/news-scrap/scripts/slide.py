@@ -24,21 +24,21 @@
 """
 
 import json
-import sys
 import io
+import os
+import sys
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 
 # ── 디자인 상수 ──
 BG_DARK = RGBColor(0x1E, 0x29, 0x3B)      # 짙은 남색
 BG_LIGHT = RGBColor(0xF8, 0xFA, 0xFC)     # 밝은 회색
 ACCENT = RGBColor(0x25, 0x63, 0xEB)        # 파란색
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 TEXT_DARK = RGBColor(0x1E, 0x29, 0x3B)
 TEXT_MUTED = RGBColor(0x64, 0x74, 0x8B)
 ORANGE = RGBColor(0xF5, 0x9E, 0x0B)
@@ -253,8 +253,12 @@ def main():
     output_path = sys.argv[1]
     input_path = sys.argv[2]
 
-    with open(input_path, "r", encoding="utf-8") as f:
+    with open(input_path, "r", encoding="utf-8-sig") as f:
         data = json.load(f)
+
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     prs = Presentation()
     prs.slide_width = SLIDE_WIDTH

@@ -13,6 +13,7 @@ Output (stdout):
 
 import io
 import json
+import os
 import sys
 
 import trafilatura
@@ -22,13 +23,18 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
 
+def _use_headless_browser() -> bool:
+    """기본은 headless, 디버깅 시에만 headed 브라우저 허용."""
+    return os.getenv("NEWS_SCRAP_HEADED", "").strip().lower() not in {"1", "true", "yes"}
+
+
 def _fetch_with_playwright(url: str) -> str | None:
     """trafilatura 실패 시 Playwright headless 브라우저로 HTML 다운로드."""
     try:
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=_use_headless_browser())
             ctx = browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -96,7 +102,7 @@ def extract_article(url: str) -> dict:
 
 
 def main():
-    raw = sys.stdin.read().strip()
+    raw = sys.stdin.read().lstrip("\ufeff").strip()
     if not raw:
         print("[]")
         return
