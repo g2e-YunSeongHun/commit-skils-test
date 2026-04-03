@@ -1,0 +1,7 @@
+interface:
+  display_name: "응급의료 뉴스 스크랩 V2"
+  short_description: "NotebookLM 필수 게이트 기반 주간 뉴스 브리핑"
+  default_prompt: "Use $news-scrap-v2 to create a weekly emergency-medicine AI news briefing with NotebookLM as a required gate."
+
+policy:
+  allow_implicit_invocation: true

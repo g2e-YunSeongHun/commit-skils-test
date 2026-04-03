@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>응급의료 AI 주간 뉴스 - {시작일} ~ {종료일}</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-alt: #f1f5f9;
+        --border: #e2e8f0;
+        --text: #1e293b;
+        --text-muted: #64748b;
+        --accent: #2563eb;
+        --accent-hover: #1d4ed8;
+        --tag-research: #6366f1;
+        --tag-deploy: #059669;
+        --tag-policy: #d97706;
+        --tag-trend: #db2777;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          "Pretendard",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      header {
+        text-align: center;
+        padding: 2rem 0 1rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2rem;
+      }
+      header h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+      header .period {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+      }
+      .stats {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+      }
+      .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        min-width: 120px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .stat-card .number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .stat-card .label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+      }
+      section {
+        margin-bottom: 2.5rem;
+      }
+      section h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--accent);
+        display: inline-block;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+      }
+      .summary-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .summary-card h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      .summary-card ul {
+        padding-left: 1.2rem;
+      }
+      .summary-card li + li {
+        margin-top: 0.45rem;
+      }
+      .article-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .article {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        transition: border-color 0.2s;
+      }
+      .article[open] {
+        border-color: var(--accent);
+      }
+      .article summary {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .article summary::-webkit-details-marker {
+        display: none;
+      }
+      .article summary::before {
+        content: "▶";
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        transition: transform 0.2s;
+        flex-shrink: 0;
+      }
+      .article[open] summary::before {
+        transform: rotate(90deg);
+      }
+      .article summary:hover {
+        background: var(--surface-alt);
+      }
+      .article .title {
+        font-weight: 600;
+        flex: 1;
+        min-width: 200px;
+      }
+      .article .meta {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+      }
+      .tag {
+        display: inline-block;
+        padding: 0.15rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .tag-research {
+        background: #eef2ff;
+        color: var(--tag-research);
+      }
+      .tag-deploy {
+        background: #ecfdf5;
+        color: var(--tag-deploy);
+      }
+      .tag-policy {
+        background: #fffbeb;
+        color: var(--tag-policy);
+      }
+      .tag-trend {
+        background: #fdf2f8;
+        color: var(--tag-trend);
+      }
+      .tag-field {
+        background: var(--surface-alt);
+        color: var(--text-muted);
+      }
+      .date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .article-body {
+        padding: 0 1.25rem 1.25rem 2.5rem;
+        border-top: 1px solid var(--border);
+      }
+      .article-body .source {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      .article-summary {
+        font-size: 0.92rem;
+        color: var(--text);
+        line-height: 1.7;
+        margin-bottom: 1rem;
+      }
+      .article-detail {
+        background: var(--surface-alt);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.75rem;
+      }
+      .article-detail h4 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+      }
+      .article-detail dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.25rem 0.75rem;
+        font-size: 0.85rem;
+      }
+      .article-detail dt {
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .article-detail dd {
+        color: var(--text-muted);
+      }
+      .article-body .link a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .article-body .link a:hover {
+        color: var(--accent-hover);
+      }
+      .empty-notice {
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        color: var(--text-muted);
+      }
+      footer {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 2rem 0 1rem;
+      }
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem;
+        }
+        .article-body {
+          padding: 0 1rem 1rem 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>응급의료 AI 주간 뉴스 브리핑</h1>
+      <p class="period">{시작일} ~ {종료일}</p>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="number">{총건수}</div>
+          <div class="label">총 수집 건수</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">{국내건수}</div>
+          <div class="label">국내 기사</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">{해외건수}</div>
+          <div class="label">해외 기사/논문</div>
+        </div>
+      </div>
+    </header>
+
+    <section>
+      <h2>주간 요약</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <h3>핵심 동향</h3>
+          <ul>
+            <!--SUMMARY_TRENDS-->
+          </ul>
+        </div>
+        <div class="summary-card">
+          <h3>주목할 기관/기업</h3>
+          <ul>
+            <!--SUMMARY_FEATURED_ORGS-->
+          </ul>
+        </div>
+        <div class="summary-card">
+          <h3>시사점</h3>
+          <p><!--SUMMARY_IMPLICATIONS--></p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>국내 기사</h2>
+      <div class="article-list">
+        <!--DOMESTIC_ARTICLES-->
+      </div>
+    </section>
+
+    <section>
+      <h2>해외 기사</h2>
+      <div class="article-list">
+        <!--OVERSEAS_ARTICLES-->
+      </div>
+    </section>
+
+    <footer>생성일: {생성일}</footer>
+  </body>
+</html>
