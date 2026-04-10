@@ -1,0 +1,7 @@
+interface:
+  display_name: "응급의료 뉴스 스크랩 Codex"
+  short_description: "NotebookLM gate와 slide-deck 기반 주간 브리핑 생성"
+  default_prompt: "Use $news-scrap-codex to create a Korean weekly emergency-medicine AI news briefing with a required NotebookLM gate and a NotebookLM-generated slide deck."
+
+policy:
+  allow_implicit_invocation: true
