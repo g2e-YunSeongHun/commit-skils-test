@@ -112,8 +112,34 @@ def is_summary_lead_in(line: str) -> bool:
             "제공된 소스를 바탕으로",
             "제공된 소스만 근거로",
             "제공해 주신 기사별로",
+            "제공된 소스에서",
+            "추가로 특정 기사",
+            "이러한 주요",
         )
-    ) or "다음과 같습니다" in text
+    ) or "다음과 같습니다" in text or "맞춤형 보고서" in text
+
+
+def is_non_content_line(line: str) -> bool:
+    text = normalize_whitespace(line)
+    if not text:
+        return True
+    if is_summary_lead_in(text):
+        return True
+    return text.startswith(("(참고:", "참고:"))
+
+
+def compose_inline_item(line: str) -> dict[str, str]:
+    text = normalize_whitespace(line)
+    if " / " in text:
+        parts = [part.strip() for part in text.split(" / ") if part.strip()]
+        if len(parts) >= 3:
+            return {"title": " / ".join(parts[:2]), "body": first_sentences(" ".join(parts[2:]), 2, 240)}
+        if len(parts) == 2:
+            return {"title": parts[0], "body": parts[1]}
+    match = re.match(r"^(.{2,100}?):\s+(.+)$", text)
+    if match:
+        return {"title": normalize_whitespace(match.group(1)), "body": first_sentences(match.group(2), 2, 240)}
+    return {"title": text, "body": ""}
 
 
 def compose_summary_item(lines: list[str]) -> dict[str, str]:
@@ -130,10 +156,34 @@ def compose_summary_item(lines: list[str]) -> dict[str, str]:
 def extract_items(text: str, max_items: int) -> list[dict[str, str]]:
     seen: set[str] = set()
     items: list[dict[str, str]] = []
+    for raw_line in (text or "").splitlines():
+        if not re.match(r"^\s*(?:[-*•]|\d+[.)])\s+", raw_line):
+            continue
+        line = strip_citations(raw_line)
+        line = strip_markdown(line)
+        line = re.sub(r"^\s*[-*•]\s*", "", line)
+        line = re.sub(r"^\s*\d+[.)]\s*", "", line)
+        line = normalize_whitespace(line)
+        if is_non_content_line(line):
+            continue
+        if ":" not in line and " / " not in line:
+            continue
+        item = compose_inline_item(line)
+        label = " ".join(part for part in (item["title"], item["body"]) if part).strip()
+        key = label.lower()
+        if len(label) < 8 or key in seen:
+            continue
+        seen.add(key)
+        items.append(item)
+        if len(items) >= max_items:
+            break
+    if items:
+        return items
+
     blocks = [block for block in re.split(r"\n\s*\n", text or "") if block.strip()]
 
     for block in blocks:
-        lines = [line for line in normalize_lines(block) if not is_summary_lead_in(line)]
+        lines = [line for line in normalize_lines(block) if not is_non_content_line(line)]
         item = compose_summary_item(lines)
         label = " ".join(part for part in (item["title"], item["body"]) if part).strip()
         if len(label) < 8:
@@ -150,7 +200,7 @@ def extract_items(text: str, max_items: int) -> list[dict[str, str]]:
         return items
 
     for line in normalize_lines(text):
-        if is_summary_lead_in(line) or len(line) < 8:
+        if is_non_content_line(line) or len(line) < 8:
             continue
         key = line.lower()
         if key in seen:
@@ -173,6 +223,7 @@ def score_ai_builder_item(item: dict[str, str]) -> int:
         "오픈소스",
         "제공",
         "보유",
+        "탑재",
         "develop",
         "developer",
         "build",
@@ -186,6 +237,7 @@ def score_ai_builder_item(item: dict[str, str]) -> int:
         "platform",
         "model",
         "solution",
+        "앱",
     )
     adopter_keywords = (
         "도입",
@@ -280,6 +332,7 @@ def looks_like_technology_name(text: str) -> bool:
         "솔루션",
         "시스템",
         "기술",
+        "앱",
     )
     return any(keyword in normalized for keyword in technology_keywords)
 
@@ -422,8 +475,7 @@ def build_company_technology_items(
         else:
             title = technology_label or entity_label
 
-        source_id = get_article_source_id(article, source_lookup)
-        summary_text = q0_summaries.get(source_id) or get_text(article, "본문", "body", "content")
+        summary_text = get_text(article, "본문", "body", "content")
         technology_body = choose_technology_sentences(summary_text, max_sentences=2)
 
         if not technology_body:
@@ -654,12 +706,7 @@ def render_article(article: dict, source_lookup: dict[str, str], q0_summaries: d
     related = esc(get_text(article, "관련기관", "related_org", "organization"))
     source_line = source if not related else f"{source} · {related}"
 
-    source_id = get_article_source_id(article, source_lookup)
-    summary = q0_summaries.get(source_id) or first_sentences(
-        get_text(article, "본문", "body", "content"),
-        max_sentences=4,
-        max_chars=700,
-    )
+    summary = first_sentences(get_text(article, "본문", "body", "content"), max_sentences=4, max_chars=700)
     summary = clean_summary_text(summary)
 
     link = get_text(article, "링크", "link", "url")

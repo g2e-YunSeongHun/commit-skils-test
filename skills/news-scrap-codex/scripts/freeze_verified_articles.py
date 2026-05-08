@@ -45,10 +45,20 @@ IMPLEMENTATION_KEYWORDS = (
     "활용",
     "실사용",
     "안착",
+    "업무협약",
+    "통합",
+    "상용화",
+    "수주",
     "workflow",
     "deployment",
     "implementation",
     "adoption",
+    "partnership",
+    "integration",
+    "rollout",
+    "contract",
+    "clearance",
+    "launch",
 )
 
 ACUTE_USECASE_KEYWORDS = (
@@ -65,11 +75,55 @@ ACUTE_USECASE_KEYWORDS = (
     "영상",
 )
 
+
+OPERATIONS_KEYWORDS = (
+    "119",
+    "소방",
+    "신고접수",
+    "출동지령",
+    "상황관제",
+    "이송",
+    "병상",
+    "과밀",
+    "대기시간",
+    "환자 흐름",
+    "전원",
+    "문서화",
+    "진료기록",
+    "ems",
+    "911",
+    "epcr",
+    "dispatch",
+    "routing",
+    "patient flow",
+    "bed management",
+    "overcrowding",
+    "command center",
+    "documentation",
+    "ambient scribe",
+    "protocol",
+)
+
+RESEARCH_SURFACE_KEYWORDS = (
+    "doi",
+    "abstract",
+    "preprint",
+    "peer-reviewed",
+    "journal",
+    "clinical trial",
+    "systematic review",
+    "review article",
+    "pubmed",
+    "medrxiv",
+)
+
 CATEGORY_WEIGHTS = {
-    "도입/제휴": 30,
-    "기술/제품": 24,
-    "연구": 20,
-    "정책": 12,
+    "도입/제휴": 34,
+    "운영/인프라": 32,
+    "정책/공공사업": 28,
+    "기술/제품": 26,
+    "정책": 24,
+    "연구": 8,
 }
 
 DOMAIN_WEIGHTS = {
@@ -81,21 +135,28 @@ DOMAIN_WEIGHTS = {
     "docdocdoc.co.kr": 7,
     "mdtoday.co.kr": 6,
     "hitnews.co.kr": 6,
-    "pubmed.ncbi.nlm.nih.gov": 10,
-    "pmc.ncbi.nlm.nih.gov": 10,
-    "annemergmed.com": 10,
-    "nature.com": 10,
-    "ai.nejm.org": 10,
-    "jmir.org": 8,
-    "medinform.jmir.org": 8,
-    "frontiersin.org": 8,
-    "mdpi.com": 8,
-    "sciencedirect.com": 8,
-    "link.springer.com": 8,
-    "biomedcentral.com": 8,
+    "jems.com": 7,
+    "firehouse.com": 7,
+    "emsworld.com": 7,
+    "healthcareitnews.com": 6,
+    "beckershospitalreview.com": 6,
+    "fiercehealthcare.com": 6,
+    "mobihealthnews.com": 5,
+    "healthitanalytics.com": 5,
+    "ems1.com": 5,
     "globenewswire.com": 4,
     "businesswire.com": 4,
     "prnewswire.com": 4,
+    "pubmed.ncbi.nlm.nih.gov": -8,
+    "pmc.ncbi.nlm.nih.gov": -8,
+    "medrxiv.org": -8,
+    "jmir.org": -6,
+    "medinform.jmir.org": -6,
+    "frontiersin.org": -6,
+    "mdpi.com": -6,
+    "sciencedirect.com": -6,
+    "link.springer.com": -6,
+    "biomedcentral.com": -6,
 }
 
 
@@ -161,9 +222,13 @@ def score_article(article: dict) -> int:
         score += 25
     score += CATEGORY_WEIGHTS.get(category, 10)
     if contains_any(combined, IMPLEMENTATION_KEYWORDS):
-        score += 8
+        score += 12
+    if contains_any(combined, OPERATIONS_KEYWORDS):
+        score += 10
     if contains_any(combined, ACUTE_USECASE_KEYWORDS) and contains_any(combined, EMERGENCY_KEYWORDS):
-        score += 6
+        score += 5
+    if contains_any(combined, RESEARCH_SURFACE_KEYWORDS):
+        score -= 12
     if related_org:
         score += 5
     if len(body) >= 200:
@@ -172,7 +237,6 @@ def score_article(article: dict) -> int:
         score += 3
         score += DOMAIN_WEIGHTS.get(domain_from_link(link), 0)
     return score
-
 
 def dedupe_and_rank(items: list[dict], limit: int) -> list[dict]:
     chosen: dict[str, dict] = {}

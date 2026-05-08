@@ -8,13 +8,13 @@
 
 ### 1. Scan
 
-- 대상 주간의 국내/해외 기사와 논문 후보를 수집한다.
+- 대상 주간의 국내/해외 기사 후보를 수집한다. 논문/프리프린트는 명시 요청 시에만 보조 후보로 수집한다.
 - `scripts/build_search_queries.py --output <run_dir>/search_queries.json`으로 주차별 query set을 만든다.
 - broad query, site-pass query, 수동 URL 목록으로 raw search hit JSON 또는 URL 목록을 준비한다.
 - raw search hit JSON 또는 URL 목록을 `scripts/scan_candidates.py`로 `candidates_raw.json`으로 정규화한다.
 - 검색 쿼리, 소스 우선순위, 필수 도메인 순회 규칙은 [search-rules.md](search-rules.md)를 따른다.
 - 국내 기사 `0건` 확정 전에는 국내 필수 도메인 전체에 대한 site-pass를 수행한다.
-- broad query에서 잡히지 않는 기사 보완을 위해 `뇌졸중 AI`, `응급 CT 판독 AI`, `POCUS AI` 같은 질환/제품 축 보조 쿼리를 추가 수행한다.
+- broad query에서 잡히지 않는 기사 보완을 위해 `119 AI 신고접수`, `EMS AI documentation ePCR`, `응급실 AI 병상 배정`, `AI 문서화`, `응급 CT 판독 AI` 같은 운영/제품/질환 축 보조 쿼리를 추가 수행한다.
 
 ### 2. Freeze
 

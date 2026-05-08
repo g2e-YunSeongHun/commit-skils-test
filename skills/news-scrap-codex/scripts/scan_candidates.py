@@ -86,6 +86,69 @@ ACUTE_SUPPORT_KEYWORDS = (
 )
 
 
+OPERATIONS_KEYWORDS = (
+    "119",
+    "소방",
+    "신고접수",
+    "출동지령",
+    "상황관제",
+    "이송",
+    "병상",
+    "과밀",
+    "대기시간",
+    "환자 흐름",
+    "전원",
+    "문서화",
+    "진료기록",
+    "ems",
+    "911",
+    "epcr",
+    "dispatch",
+    "routing",
+    "patient flow",
+    "bed management",
+    "overcrowding",
+    "command center",
+    "documentation",
+    "ambient scribe",
+    "protocol",
+)
+
+IMPLEMENTATION_KEYWORDS = (
+    "도입",
+    "적용",
+    "활용",
+    "실사용",
+    "안착",
+    "업무협약",
+    "통합",
+    "상용화",
+    "수주",
+    "deployment",
+    "implementation",
+    "adoption",
+    "partnership",
+    "integration",
+    "rollout",
+    "contract",
+    "clearance",
+    "launch",
+)
+
+RESEARCH_SURFACE_KEYWORDS = (
+    "doi",
+    "abstract",
+    "preprint",
+    "peer-reviewed",
+    "journal",
+    "clinical trial",
+    "systematic review",
+    "review article",
+    "pubmed",
+    "medrxiv",
+)
+
+
 def load_items(path: str) -> list[object]:
     if path == "-":
         raw = sys.stdin.read().strip()
@@ -169,30 +232,34 @@ def score_candidate(
     if contains_any(combined, AI_KEYWORDS):
         score += 25
         reasons.append("ai")
+    if contains_any(combined, OPERATIONS_KEYWORDS):
+        score += 12
+        reasons.append("operations_signal")
+    if contains_any(combined, IMPLEMENTATION_KEYWORDS):
+        score += 10
+        reasons.append("implementation_signal")
     if contains_any(combined, ACUTE_SUPPORT_KEYWORDS):
-        score += 8
+        score += 6
         reasons.append("acute_support")
 
     if section == "domestic" and hostname in DOMESTIC_MANDATORY_DOMAINS:
         score += 6
         reasons.append("domestic_priority_domain")
     if section == "overseas" and hostname in OVERSEAS_PRIORITY_DOMAINS:
-        score += 4
+        score += 6
         reasons.append("overseas_priority_domain")
     if section == "papers" and hostname in PAPER_PRIORITY_DOMAINS:
-        score += 5
-        reasons.append("paper_priority_domain")
-
-    if "도입" in combined or "실사용" in combined or "안착" in combined or "deployment" in combined:
-        score += 5
-        reasons.append("implementation_signal")
+        score -= 18
+        reasons.append("paper_surface")
+    if contains_any(combined, RESEARCH_SURFACE_KEYWORDS):
+        score -= 12
+        reasons.append("research_surface")
 
     if not (title.strip() or snippet.strip()) and query.strip():
         score += 3
         reasons.append("query_seed")
 
     return score, reasons
-
 
 def normalize_item(raw_item: object) -> dict | None:
     if isinstance(raw_item, str):
@@ -308,9 +375,9 @@ def main() -> None:
         output_path = Path(args.output).resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(rendered, encoding="utf-8")
-        print(f"DONE:{output_path}")
+        sys.stderr.write(f"DONE:{output_path}\n")
         return
-    print(rendered)
+    sys.stdout.write(rendered + "\n")
 
 
 if __name__ == "__main__":
