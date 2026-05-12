@@ -70,3 +70,15 @@
 - `news_<week_id>.html`
 - `news_slide_<week_id>.pdf`
 - `news_slide_<week_id>.pptx`
+
+## Run Directory Reset
+
+At the start of every run, after choosing the target week and `<run_dir>`, run:
+
+```bash
+python scripts/reset_week_outputs.py <run_dir>
+```
+
+If `<run_dir>` does not exist, the script skips reset. If it exists, the script deletes only generated artifacts in `<run_dir>`: `search_queries.json`, `candidates_raw.json`, `verified_articles*.json`, `notebook_manifest.json`, `notebooklm_outputs.json`, `featured_article.json`, `slide_deck_artifact.json`, `notebooklm_failure.json`, `news_*.html`, `news_slide_*.pdf`, `news_slide_*.pptx`, `*.tmp`, and `sources/`. It leaves unrelated manual files alone. After reset, repeat the full workflow from scan through NotebookLM gate and slide-deck download.
+
+If the user provides a preverified JSON input, keep that source file outside `<run_dir>` or write it back into `<run_dir>` only after reset.

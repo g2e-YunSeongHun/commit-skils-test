@@ -40,17 +40,18 @@ description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when c
 ## 실행 순서
 
 1. 기사 범위를 계산한다.
-2. `python scripts/build_search_queries.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --format json --output <run_dir>/search_queries.json`으로 주차별 검색 세트를 만든다.
-3. broad query, site-pass query, 수동 URL 목록 중 하나로 raw search hit JSON 또는 URL 목록을 준비한다.
-4. `python scripts/scan_candidates.py <input_json> --start-date YYYY-MM-DD --end-date YYYY-MM-DD --output <run_dir>/candidates_raw.json`로 정규화한다.
-5. `candidates_raw.json`의 후보 URL을 `python scripts/extract.py`로 검증한다.
-6. 검증된 기사만으로 `verified_articles.json`을 준비한다.
-7. `python scripts/freeze_verified_articles.py <verified_json>`로 기사 순서와 건수 상한을 고정한다.
-8. `python scripts/build_notebook_sources.py <verified_json> <run_dir>`를 실행한다.
-9. `python scripts/notebooklm_gate.py <run_dir>/notebook_manifest.json --output-dir <run_dir>`를 실행한다.
-10. `python scripts/render_dashboard.py <verified_json> <run_dir>/notebooklm_outputs.json <run_dir>/news_<week_id>.html <run_dir>/featured_article.json`를 실행한다.
-11. `python scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_outputs.json <verified_json> --output-dir <run_dir>`를 실행한다.
-12. 결과물이 템플릿에서 벗어나면 `notebooklm_slide_deck.py`를 다시 실행하거나 NotebookLM `revise-slide`를 추가 적용한다.
+2. 해당 주차 `<run_dir>`를 정한 뒤 `python scripts/reset_week_outputs.py <run_dir>`를 먼저 실행한다. 폴더가 없으면 건너뛰고, 기존 생성물이 있으면 삭제한다.
+3. `python scripts/build_search_queries.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --format json --output <run_dir>/search_queries.json`으로 주차별 검색 세트를 만든다.
+4. broad query, site-pass query, 수동 URL 목록 중 하나로 raw search hit JSON 또는 URL 목록을 준비한다.
+5. `python scripts/scan_candidates.py <input_json> --start-date YYYY-MM-DD --end-date YYYY-MM-DD --output <run_dir>/candidates_raw.json`로 정규화한다.
+6. `candidates_raw.json`의 후보 URL을 `python scripts/extract.py`로 검증한다.
+7. 검증된 기사만으로 `verified_articles.json`을 준비한다.
+8. `python scripts/freeze_verified_articles.py <verified_json>`로 기사 순서와 건수 상한을 고정한다.
+9. `python scripts/build_notebook_sources.py <verified_json> <run_dir>`를 실행한다.
+10. `python scripts/notebooklm_gate.py <run_dir>/notebook_manifest.json --output-dir <run_dir>`를 실행한다.
+11. `python scripts/render_dashboard.py <verified_json> <run_dir>/notebooklm_outputs.json <run_dir>/news_<week_id>.html <run_dir>/featured_article.json`를 실행한다.
+12. `python scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_outputs.json <verified_json> --output-dir <run_dir>`를 실행한다.
+13. 결과물이 템플릿에서 벗어나면 `notebooklm_slide_deck.py`를 다시 실행하거나 NotebookLM `revise-slide`를 추가 적용한다.
 
 ## 무엇을 읽을지
 
@@ -73,7 +74,18 @@ description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when c
   `verified_articles.json`에서 NotebookLM 업로드용 텍스트와 manifest를 만든다.
 - `scripts/notebooklm_gate.py`
   새 노트를 만들고 소스를 업로드한 뒤 Q0~Q6 분석 결과를 저장한다.
+- `scripts/reset_week_outputs.py`
+  스킬 실행 시작 시 같은 주차 `<run_dir>`에 남아 있는 기존 생성물을 삭제한다.
 - `scripts/render_dashboard.py`
   `verified_articles.json`과 `notebooklm_outputs.json`에서 주간 HTML 대시보드를 만든다.
 - `scripts/notebooklm_slide_deck.py`
   대표 기사를 선택하고 NotebookLM `slide-deck` 생성, `revise-slide`, PPTX/PDF 다운로드를 수행한다.
+
+## 실행 전 주차 산출물 초기화
+
+- 사용자가 별도로 요청하지 않아도 스킬 실행을 시작할 때마다 해당 주차 `<run_dir>`의 기존 산출물을 재사용하지 않는다.
+- 같은 주차의 기존 `<run_dir>`를 유지하되, 검색이나 NotebookLM 작업을 시작하기 전에 `python scripts/reset_week_outputs.py <run_dir>`를 실행해 스킬이 만든 생성물만 삭제한다.
+- 이 초기화는 `search_queries.json`, `candidates_raw.json`, `verified_articles*.json`, `notebook_manifest.json`, `notebooklm_outputs.json`, `featured_article.json`, `slide_deck_artifact.json`, `notebooklm_failure.json`, `news_*.html`, `news_slide_*.pdf`, `news_slide_*.pptx`, `*.tmp`, `sources/`만 대상으로 한다.
+- 사용자가 따로 보관한 메모, 수동 검토 자료, 원본 입력 파일처럼 위 패턴에 맞지 않는 파일은 삭제하지 않는다.
+- 사용자가 검증 완료 JSON을 직접 제공하는 경우, 그 입력 파일은 `<run_dir>` 밖에 두고 초기화 후 새 `<run_dir>` 산출물로 복사하거나 별도 출력 경로를 지정한다.
+- 초기화 후에는 검색, 후보 정리, 검증, NotebookLM gate, HTML, slide-deck까지 처음부터 다시 수행한다.

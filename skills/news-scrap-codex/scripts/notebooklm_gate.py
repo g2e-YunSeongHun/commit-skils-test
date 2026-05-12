@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -47,6 +49,10 @@ PROMPTS = [
         "question": "Q4에서 선정한 대표 기사 1건을 아래 4줄 형식으로만 답해줘.\nTITLE: 기사 제목\nMEDIA: 매체명\nDATE: YYYY-MM-DD 또는 미상\nREASON: 선정 이유",
     },
 ]
+
+
+NOTEBOOKLM_AUTO_LOGIN_TIMEOUT_SECONDS = int(os.getenv("NOTEBOOKLM_AUTO_LOGIN_TIMEOUT", "300"))
+NOTEBOOKLM_AUTO_LOGIN_DISABLED_VALUES = {"0", "false", "no", "off"}
 
 
 class GateError(RuntimeError):
@@ -102,15 +108,115 @@ def write_failure(
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def auth_check() -> None:
-    data = run_command(["notebooklm", "auth", "check", "--json"], step="auth_check")
+def _auth_failures(data: dict) -> list[str]:
     checks = data.get("checks", {})
     if not isinstance(checks, dict):
-        return
+        return []
     required = ("storage_exists", "json_valid", "cookies_present", "sid_cookie", "token_fetch")
-    failed = [name for name in required if checks.get(name) is False]
-    if failed:
-        raise GateError("auth_check", f"NotebookLM 인증 체크 실패: {', '.join(failed)}")
+    return [name for name in required if checks.get(name) is False]
+
+
+def _auto_login_enabled() -> bool:
+    value = os.getenv("NEWS_SCRAP_NOTEBOOKLM_AUTO_LOGIN", "").strip().lower()
+    return value not in NOTEBOOKLM_AUTO_LOGIN_DISABLED_VALUES
+
+
+def _browser_login(storage_path: Path, timeout_seconds: int) -> None:
+    if os.environ.get("NOTEBOOKLM_AUTH_JSON"):
+        raise GateError(
+            "auth_login",
+            "NOTEBOOKLM_AUTH_JSON 환경변수가 설정되어 있어 브라우저 기반 자동 로그인 복구를 사용할 수 없습니다.",
+        )
+
+    try:
+        from notebooklm.cli.session import (
+            GOOGLE_ACCOUNTS_URL,
+            NOTEBOOKLM_HOST,
+            NOTEBOOKLM_URL,
+            _ensure_chromium_installed,
+            _windows_playwright_event_loop,
+        )
+        from notebooklm.paths import get_browser_profile_dir
+        from playwright.sync_api import sync_playwright
+    except Exception as error:
+        raise GateError("auth_login", f"NotebookLM 자동 로그인 준비 실패: {error}") from error
+
+    storage_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    browser_profile = get_browser_profile_dir()
+    browser_profile.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+    _ensure_chromium_installed()
+    deadline = time.monotonic() + timeout_seconds
+
+    try:
+        with _windows_playwright_event_loop(), sync_playwright() as playwright:
+            context = playwright.chromium.launch_persistent_context(
+                user_data_dir=str(browser_profile),
+                headless=False,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--password-store=basic",
+                ],
+                ignore_default_args=["--enable-automation"],
+            )
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                page.goto(NOTEBOOKLM_URL, wait_until="load")
+                while time.monotonic() < deadline:
+                    current_url = page.url
+                    cookies = context.cookies()
+                    has_google_sid = any(
+                        cookie.get("name") in {"SID", "__Secure-1PSID", "__Secure-3PSID"}
+                        for cookie in cookies
+                    )
+                    if NOTEBOOKLM_HOST in current_url and has_google_sid:
+                        page.goto(GOOGLE_ACCOUNTS_URL, wait_until="load")
+                        page.goto(NOTEBOOKLM_URL, wait_until="load")
+                        context.storage_state(path=str(storage_path))
+                        storage_path.chmod(0o600)
+                        return
+                    time.sleep(3)
+                raise GateError(
+                    "auth_login",
+                    f"NotebookLM 자동 로그인 대기 시간 초과: {timeout_seconds}초 안에 NotebookLM 홈으로 진입하지 못했습니다.",
+                )
+            finally:
+                context.close()
+    except GateError:
+        raise
+    except Exception as error:
+        raise GateError("auth_login", f"NotebookLM 자동 로그인 실패: {error}") from error
+
+
+def auth_check() -> None:
+    first_error: GateError | None = None
+    storage_path = Path(os.getenv("NOTEBOOKLM_STORAGE", "")).expanduser() if os.getenv("NOTEBOOKLM_STORAGE") else None
+    try:
+        data = run_command(["notebooklm", "auth", "check", "--json"], step="auth_check")
+        failed = _auth_failures(data)
+        if not failed:
+            return
+        first_error = GateError("auth_check", f"NotebookLM 인증 체크 실패: {', '.join(failed)}")
+    except GateError as error:
+        data = {}
+        first_error = error
+
+    if not _auto_login_enabled():
+        raise first_error
+
+    details = data.get("details", {})
+    if storage_path is None:
+        storage_value = details.get("storage_path") if isinstance(details, dict) else ""
+        storage_path = Path(storage_value).expanduser() if storage_value else Path.home() / ".notebooklm" / "storage_state.json"
+
+    _browser_login(storage_path, NOTEBOOKLM_AUTO_LOGIN_TIMEOUT_SECONDS)
+    retry = run_command(["notebooklm", "auth", "check", "--json"], step="auth_check")
+    retry_failed = _auth_failures(retry)
+    if retry_failed:
+        raise GateError(
+            "auth_check",
+            f"NotebookLM 자동 로그인 후에도 인증 체크 실패: {', '.join(retry_failed)}",
+        )
 
 
 def create_notebook(title: str) -> dict:
