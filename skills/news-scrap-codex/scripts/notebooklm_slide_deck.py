@@ -84,7 +84,7 @@ def get_question(outputs: dict, question_id: str) -> dict | None:
 
 def get_articles(payload: dict) -> list[tuple[str, dict]]:
     items_out: list[tuple[str, dict]] = []
-    for section_name in ("국내기사", "해외기사", "해외논문", "domestic_articles", "overseas_articles"):
+    for section_name in ("국내기사", "해외기사", "domestic_articles", "overseas_articles"):
         value = payload.get(section_name)
         if not isinstance(value, list):
             continue

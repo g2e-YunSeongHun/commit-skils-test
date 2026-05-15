@@ -14,7 +14,6 @@
         --text-muted: #64748b;
         --accent: #2563eb;
         --accent-hover: #1d4ed8;
-        --tag-research: #6366f1;
         --tag-deploy: #059669;
         --tag-policy: #d97706;
         --tag-trend: #db2777;
@@ -102,33 +101,6 @@
         display: inline-block;
       }
 
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1rem;
-      }
-
-      .summary-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-      }
-
-      .summary-card h3 {
-        font-size: 1rem;
-        margin-bottom: 0.75rem;
-      }
-
-      .summary-card ul {
-        padding-left: 1.2rem;
-      }
-
-      .summary-card li + li {
-        margin-top: 0.45rem;
-      }
-
       .article-list {
         display: flex;
         flex-direction: column;
@@ -198,11 +170,6 @@
         border-radius: 999px;
         font-size: 0.75rem;
         font-weight: 500;
-      }
-
-      .tag-research {
-        background: #eef2ff;
-        color: var(--tag-research);
       }
 
       .tag-deploy {
@@ -313,30 +280,6 @@
     <section>
       <h2>해외 기사</h2>
       <div class="article-list">{{overseas_articles}}</div>
-    </section>
-
-    <section>
-      <h2>주간 요약</h2>
-      <div class="summary-grid">
-        <div class="summary-card">
-          <h3>주요 동향</h3>
-          <ul>
-            {{summary_trends}}
-          </ul>
-        </div>
-        <div class="summary-card">
-          <h3>주요 기업 / 기술</h3>
-          <ul>
-            {{summary_featured_orgs}}
-          </ul>
-        </div>
-        <div class="summary-card">
-          <h3>시사점</h3>
-          <ul>
-            {{summary_implications}}
-          </ul>
-        </div>
-      </div>
     </section>
 
     <footer>생성일: {{generated_date}}</footer>

@@ -11,7 +11,7 @@ from pathlib import Path
 
 ARTICLE_KEYS = {
     "domestic": ("국내기사", "domestic_articles"),
-    "overseas": ("해외기사", "해외논문", "overseas_articles"),
+    "overseas": ("해외기사", "overseas_articles"),
 }
 
 

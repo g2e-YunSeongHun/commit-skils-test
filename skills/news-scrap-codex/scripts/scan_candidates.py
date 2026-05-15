@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import sys
 from pathlib import Path
@@ -13,11 +12,10 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from build_search_queries import (
     DOMESTIC_MANDATORY_DOMAINS,
     OVERSEAS_PRIORITY_DOMAINS,
-    PAPER_PRIORITY_DOMAINS,
 )
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stdin.reconfigure(encoding="utf-8")
 
 
 NOISE_DOMAINS = {
@@ -30,6 +28,57 @@ NOISE_DOMAINS = {
     "velog.io",
     "reddit.com",
 }
+
+BLOCKED_SOURCE_DOMAINS = (
+    "pubmed.ncbi.nlm.nih.gov",
+    "pmc.ncbi.nlm.nih.gov",
+    "medrxiv.org",
+    "biorxiv.org",
+    "arxiv.org",
+    "researchsquare.com",
+    "papers.ssrn.com",
+    "annemergmed.com",
+    "jamanetwork.com",
+    "nejm.org",
+    "ai.nejm.org",
+    "bmj.com",
+    "thelancet.com",
+    "jmir.org",
+    "medinform.jmir.org",
+    "nature.com",
+    "science.org",
+    "frontiersin.org",
+    "mdpi.com",
+    "sciencedirect.com",
+    "link.springer.com",
+    "biomedcentral.com",
+    "onlinelibrary.wiley.com",
+    "academic.oup.com",
+    "journals.sagepub.com",
+    "tandfonline.com",
+    "news-medical.net",
+    "medicalxpress.com",
+    "sciencedaily.com",
+    "eurekalert.org",
+)
+
+BLOCKED_SOURCE_MARKERS = (
+    "doi",
+    "abstract",
+    "preprint",
+    "peer-reviewed",
+    "journal",
+    "clinical trial",
+    "clinical study",
+    "observational study",
+    "retrospective",
+    "systematic review",
+    "review article",
+    "pubmed",
+    "medrxiv",
+    "biorxiv",
+    "arxiv",
+)
 
 TRACKING_KEYS = {
     "utm_source",
@@ -48,6 +97,7 @@ EMERGENCY_KEYWORDS = (
     "응급실",
     "응급의료",
     "구급",
+    "119",
     "중증",
     "트리아지",
     "emergency",
@@ -105,10 +155,6 @@ OPERATIONS_KEYWORDS = (
     "epcr",
     "dispatch",
     "routing",
-    "patient flow",
-    "bed management",
-    "overcrowding",
-    "command center",
     "documentation",
     "ambient scribe",
     "protocol",
@@ -134,20 +180,6 @@ IMPLEMENTATION_KEYWORDS = (
     "clearance",
     "launch",
 )
-
-RESEARCH_SURFACE_KEYWORDS = (
-    "doi",
-    "abstract",
-    "preprint",
-    "peer-reviewed",
-    "journal",
-    "clinical trial",
-    "systematic review",
-    "review article",
-    "pubmed",
-    "medrxiv",
-)
-
 
 def load_items(path: str) -> list[object]:
     if path == "-":
@@ -198,19 +230,19 @@ def is_noise_domain(hostname: str) -> bool:
     return hostname in NOISE_DOMAINS or any(hostname.endswith(f".{domain}") for domain in NOISE_DOMAINS)
 
 
+def is_listed_domain(hostname: str, domains: tuple[str, ...]) -> bool:
+    return hostname in domains or any(hostname.endswith(f".{domain}") for domain in domains)
+
+
 def infer_section(hostname: str, haystack: str) -> str:
-    if hostname in PAPER_PRIORITY_DOMAINS:
-        return "papers"
     if hostname.endswith(".kr") or hostname in DOMESTIC_MANDATORY_DOMAINS:
         return "domestic"
-    if any(token in haystack for token in ("doi", "journal", "published:", "abstract", "peer-reviewed")):
-        return "papers"
     return "overseas"
 
 
 def normalize_section_hint(value: str) -> str:
     lowered = (value or "").strip().lower()
-    if lowered in {"domestic", "overseas", "papers"}:
+    if lowered in {"domestic", "overseas"}:
         return lowered
     return ""
 
@@ -248,13 +280,6 @@ def score_candidate(
     if section == "overseas" and hostname in OVERSEAS_PRIORITY_DOMAINS:
         score += 6
         reasons.append("overseas_priority_domain")
-    if section == "papers" and hostname in PAPER_PRIORITY_DOMAINS:
-        score -= 18
-        reasons.append("paper_surface")
-    if contains_any(combined, RESEARCH_SURFACE_KEYWORDS):
-        score -= 12
-        reasons.append("research_surface")
-
     if not (title.strip() or snippet.strip()) and query.strip():
         score += 3
         reasons.append("query_seed")
@@ -297,8 +322,12 @@ def normalize_item(raw_item: object) -> dict | None:
     hostname = host_from_url(canonical_url)
     if not hostname or is_noise_domain(hostname):
         return None
+    if is_listed_domain(hostname, BLOCKED_SOURCE_DOMAINS):
+        return None
 
-    haystack = f"{item['title']}\n{item['snippet']}".lower()
+    haystack = f"{item['title']}\n{item['snippet']}\n{item['query']}".lower()
+    if contains_any(haystack, BLOCKED_SOURCE_MARKERS):
+        return None
     section = normalize_section_hint(item["section_hint"])
     if not section:
         section = infer_section(hostname, haystack)
@@ -335,7 +364,7 @@ def dedupe_candidates(candidates: list[dict]) -> list[dict]:
 
 
 def sort_key(candidate: dict) -> tuple[object, ...]:
-    section_order = {"domestic": 0, "overseas": 1, "papers": 2}
+    section_order = {"domestic": 0, "overseas": 1}
     return (
         section_order.get(candidate["section_guess"], 9),
         -int(candidate["score"]),
@@ -346,7 +375,7 @@ def sort_key(candidate: dict) -> tuple[object, ...]:
 
 
 def build_payload(candidates: list[dict], start_date: str, end_date: str) -> dict:
-    grouped = {"domestic": 0, "overseas": 0, "papers": 0}
+    grouped = {"domestic": 0, "overseas": 0}
     for candidate in candidates:
         grouped[candidate["section_guess"]] = grouped.get(candidate["section_guess"], 0) + 1
     return {

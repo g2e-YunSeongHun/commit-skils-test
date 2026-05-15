@@ -16,6 +16,7 @@ EMERGENCY_KEYWORDS = (
     "응급실",
     "응급의료",
     "구급",
+    "119",
     "중증",
     "트리아지",
     "emergency",
@@ -95,26 +96,60 @@ OPERATIONS_KEYWORDS = (
     "epcr",
     "dispatch",
     "routing",
-    "patient flow",
-    "bed management",
-    "overcrowding",
-    "command center",
     "documentation",
     "ambient scribe",
     "protocol",
 )
 
-RESEARCH_SURFACE_KEYWORDS = (
+BLOCKED_SOURCE_DOMAINS = (
+    "news-medical.net",
+    "medicalxpress.com",
+    "sciencedaily.com",
+    "eurekalert.org",
+    "pubmed.ncbi.nlm.nih.gov",
+    "pmc.ncbi.nlm.nih.gov",
+    "medrxiv.org",
+    "biorxiv.org",
+    "arxiv.org",
+    "researchsquare.com",
+    "papers.ssrn.com",
+    "annemergmed.com",
+    "jamanetwork.com",
+    "nejm.org",
+    "ai.nejm.org",
+    "bmj.com",
+    "thelancet.com",
+    "jmir.org",
+    "medinform.jmir.org",
+    "nature.com",
+    "science.org",
+    "frontiersin.org",
+    "mdpi.com",
+    "sciencedirect.com",
+    "link.springer.com",
+    "biomedcentral.com",
+    "onlinelibrary.wiley.com",
+    "academic.oup.com",
+    "journals.sagepub.com",
+    "tandfonline.com",
+)
+
+BLOCKED_SOURCE_MARKERS = (
     "doi",
     "abstract",
     "preprint",
     "peer-reviewed",
     "journal",
     "clinical trial",
+    "clinical study",
+    "observational study",
+    "retrospective",
     "systematic review",
     "review article",
     "pubmed",
     "medrxiv",
+    "biorxiv",
+    "arxiv",
 )
 
 CATEGORY_WEIGHTS = {
@@ -123,7 +158,6 @@ CATEGORY_WEIGHTS = {
     "정책/공공사업": 28,
     "기술/제품": 26,
     "정책": 24,
-    "연구": 8,
 }
 
 DOMAIN_WEIGHTS = {
@@ -147,16 +181,6 @@ DOMAIN_WEIGHTS = {
     "globenewswire.com": 4,
     "businesswire.com": 4,
     "prnewswire.com": 4,
-    "pubmed.ncbi.nlm.nih.gov": -8,
-    "pmc.ncbi.nlm.nih.gov": -8,
-    "medrxiv.org": -8,
-    "jmir.org": -6,
-    "medinform.jmir.org": -6,
-    "frontiersin.org": -6,
-    "mdpi.com": -6,
-    "sciencedirect.com": -6,
-    "link.springer.com": -6,
-    "biomedcentral.com": -6,
 }
 
 
@@ -199,6 +223,22 @@ def domain_from_link(link: str) -> str:
     return hostname.lower().lstrip("www.")
 
 
+def is_listed_domain(hostname: str, domains: tuple[str, ...]) -> bool:
+    return hostname in domains or any(hostname.endswith(f".{domain}") for domain in domains)
+
+
+def is_blocked_article(article: dict) -> bool:
+    link = get_text(article, "링크", "link", "url")
+    hostname = domain_from_link(link) if link else ""
+    if hostname and is_listed_domain(hostname, BLOCKED_SOURCE_DOMAINS):
+        return True
+    title = get_text(article, "제목", "title")
+    body = get_text(article, "본문", "body", "content")
+    category = get_text(article, "구분", "category")
+    combined = f"{title}\n{body}\n{category}"
+    return category.lower() == "research" or category == "\uc5f0\uad6c" or contains_any(combined, BLOCKED_SOURCE_MARKERS)
+
+
 def article_key(article: dict) -> str:
     link = get_text(article, "링크", "link", "url")
     title = get_text(article, "제목", "title")
@@ -227,8 +267,6 @@ def score_article(article: dict) -> int:
         score += 10
     if contains_any(combined, ACUTE_USECASE_KEYWORDS) and contains_any(combined, EMERGENCY_KEYWORDS):
         score += 5
-    if contains_any(combined, RESEARCH_SURFACE_KEYWORDS):
-        score -= 12
     if related_org:
         score += 5
     if len(body) >= 200:
@@ -241,6 +279,8 @@ def score_article(article: dict) -> int:
 def dedupe_and_rank(items: list[dict], limit: int) -> list[dict]:
     chosen: dict[str, dict] = {}
     for article in items:
+        if is_blocked_article(article):
+            continue
         key = article_key(article)
         article_copy = dict(article)
         article_copy["_score"] = score_article(article_copy)
@@ -280,16 +320,13 @@ def main() -> None:
     if not isinstance(domestic, list):
         domestic = []
 
-    overseas: list[dict] = []
-    for key in ("해외기사", "해외논문"):
-        value = payload.get(key)
-        if isinstance(value, list):
-            overseas.extend(item for item in value if isinstance(item, dict))
+    overseas = payload.get("해외기사")
+    if not isinstance(overseas, list):
+        overseas = []
 
     payload["국내기사"] = dedupe_and_rank(domestic, args.domestic_limit)
     payload["해외기사"] = dedupe_and_rank(overseas, args.overseas_limit)
-    if "해외논문" in payload:
-        payload["해외논문"] = []
+    payload.pop("\ud574\uc678\ub17c\ubb38", None)
 
     dump_json(output_path, payload)
     print(f"DONE:{output_path}")

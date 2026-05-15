@@ -4,43 +4,40 @@
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")
 
 
 DOMESTIC_CORE_QUERIES = (
-    "응급의료 AI 현장 적용 {period}",
-    "응급의학 인공지능 병원 도입 {period}",
-    "응급실 AI 인공지능 {period}",
-    "응급환자 AI 트리아지 분류 {period}",
-    "응급의료 AI 정책 정부 {period}",
-    "119 AI 신고접수 음성인식 {period}",
-    "119 AI 출동지령 상황관제 {period}",
-    "119 AI 시스템 구급 {period}",
-    "구급대 AI 심전도 이송 병원 선정 {period}",
-    "응급실 AI 병상 배정 과밀 대기시간 {period}",
-    "응급실 AI 환자 흐름 운영 {period}",
-    "응급의료센터 AI 운영 시스템 {period}",
+    "응급의료 AI {period}",
+    "응급실 AI {period}",
+    "응급환자 AI 트리아지 {period}",
+    "중증환자 AI 분류 {period}",
+    "응급 CT AI 판독 {period}",
+    "뇌졸중 AI 응급 {period}",
+    "119 AI 신고접수 {period}",
+    "119 AI 출동지령 {period}",
+    "119 AI 상황관제 {period}",
+    "구급대 AI {period}",
+    "응급실 AI 문서화 진료기록 {period}",
 )
 
 DOMESTIC_SUPPLEMENTAL_QUERIES = (
-    "응급실 AI 문서화 진료기록 {period}",
-    "응급실 AI 실사용 도구 {period}",
-    "응급 협진 AI 전원 조정 {period}",
-    "소방청 AI 응급의료 {period}",
-    "재난응급 AI 상황실 {period}",
-    "권역응급의료센터 AI {period}",
-    "뇌졸중 AI 응급 치료 판단 {period}",
+    "의료 AI 응급실 {period}",
+    "의료 AI 응급환자 {period}",
+    "의료 AI 중증환자 {period}",
+    "응급실 음성인식 AI {period}",
+    "응급실 생성형 AI {period}",
+    "응급실 실사용 AI {period}",
+    "소방청 AI 119 {period}",
+    "소방청 AI 구급 {period}",
+    "심전도 AI 구급 {period}",
     "뇌출혈 AI 응급 영상 분석 {period}",
-    "응급 CT AI 판독 {period}",
-    "응급 MRI AI 판독 {period}",
-    "응급 심장초음파 AI {period}",
     "POCUS AI 응급 {period}",
 )
 
@@ -57,9 +54,9 @@ DOMESTIC_MANDATORY_DOMAINS = (
 )
 
 DOMESTIC_SITE_PASS_PATTERNS = (
-    "site:{domain} (119 OR 구급 OR 소방 OR 응급실 OR 응급의료 OR 권역응급의료센터) (AI OR 인공지능 OR \"의료 AI\") {period}",
-    "site:{domain} (신고접수 OR 출동지령 OR 상황관제 OR 이송 OR 병상 OR 과밀 OR 전원 OR 문서화 OR 진료기록) (AI OR 인공지능) (응급 OR 응급실 OR 구급 OR 소방) {period}",
-    "site:{domain} (도입 OR 적용 OR 활용 OR 실사용 OR 안착 OR 업무협약 OR 통합 OR 상용화 OR 수주) (AI OR 인공지능) (응급 OR 응급실 OR 구급 OR 소방 OR 병원) {period}",
+    "site:{domain} (119 OR 구급 OR 응급실 OR 응급의료 OR 중증 OR 트리아지) (AI OR 인공지능 OR \"의료 AI\") {period}",
+    "site:{domain} (신고접수 OR 출동지령 OR 상황관제 OR 이송 OR 문서화 OR 진료기록 OR 음성인식) (AI OR 인공지능) (119 OR 응급 OR 응급실 OR 구급) {period}",
+    "site:{domain} (도입 OR 적용 OR 활용 OR 실사용 OR 안착 OR 업무협약 OR 통합 OR 상용화 OR 수주) (AI OR 인공지능 OR \"의료 AI\") (응급 OR 응급실 OR 구급 OR 119 OR 중증 OR 트리아지 OR 환자분류) {period}",
     "site:{domain} (트리아지 OR 중증도 OR 분류 OR 예측 OR 뇌졸중 OR 심전도 OR CT OR POCUS) (AI OR 인공지능) (응급 OR 응급실 OR 중증 OR 구급) {period}",
 )
 
@@ -68,13 +65,12 @@ OVERSEAS_CORE_QUERIES = (
     "emergency medicine artificial intelligence hospital deployment {period}",
     "EMS AI documentation ePCR {period}",
     "911 AI dispatch emergency medical services {period}",
-    "emergency department AI patient flow operations {period}",
-    "emergency department AI bed management overcrowding {period}",
     "emergency department AI triage {period}",
     "prehospital AI EMS clinical workflow {period}",
     "ambulance AI routing dispatch real-time {period}",
     "emergency department ambient AI scribe documentation {period}",
-    "hospital command center AI emergency department {period}",
+    "emergency department AI clinical decision support deployment {period}",
+    "AI fracture triage emergency department clearance {period}",
 )
 
 OVERSEAS_SUPPLEMENTAL_QUERIES = (
@@ -82,7 +78,6 @@ OVERSEAS_SUPPLEMENTAL_QUERIES = (
     "AI clinical workflow platform EMS {period}",
     "emergency care AI partnership integration {period}",
     "emergency department AI documentation scribe {period}",
-    "emergency department AI clinical decision support deployment {period}",
     "stroke AI emergency workflow {period}",
     "sepsis AI emergency department {period}",
     "POCUS AI emergency {period}",
@@ -107,46 +102,10 @@ OVERSEAS_PRIORITY_DOMAINS = (
 
 OVERSEAS_SITE_PASS_PATTERNS = (
     "site:{domain} (\"emergency department\" OR \"emergency medicine\" OR EMS OR ambulance OR 911) (AI OR \"artificial intelligence\" OR \"machine learning\") {period}",
-    "site:{domain} (documentation OR ePCR OR dispatch OR routing OR \"patient flow\" OR overcrowding OR \"bed management\" OR \"command center\" OR \"ambient scribe\") (AI OR \"artificial intelligence\") (emergency OR EMS OR hospital OR 911) {period}",
-    "site:{domain} (deployment OR implementation OR adoption OR partnership OR integration OR rollout OR contract OR clearance) (AI OR \"artificial intelligence\") (hospital OR EMS OR emergency OR ambulance OR 911) {period}",
-    "site:{domain} (triage OR stroke OR sepsis OR ultrasound OR POCUS OR radiology) (AI OR \"artificial intelligence\") (emergency OR triage OR \"acute care\" OR EMS) {period}",
+    "site:{domain} (documentation OR ePCR OR dispatch OR routing OR \"ambient scribe\" OR scribe) (AI OR \"artificial intelligence\") (emergency OR EMS OR ambulance OR 911 OR \"emergency department\") {period}",
+    "site:{domain} (deployment OR implementation OR adoption OR partnership OR integration OR rollout OR contract OR clearance OR launch) (AI OR \"artificial intelligence\") (EMS OR emergency OR ambulance OR 911 OR \"emergency department\" OR triage) {period}",
+    "site:{domain} (triage OR stroke OR sepsis OR ultrasound OR POCUS OR radiology OR fracture) (AI OR \"artificial intelligence\") (emergency OR triage OR \"acute care\" OR EMS OR \"emergency department\") {period}",
 )
-
-PAPER_CORE_QUERIES = (
-    "emergency triage AI machine learning site:pubmed.ncbi.nlm.nih.gov {period}",
-    "emergency medicine artificial intelligence peer-reviewed {period}",
-    "emergency department AI clinical trial {period}",
-    "emergency department crowding AI resource allocation {period}",
-    "prehospital emergency AI prediction model {period}",
-)
-
-PAPER_SUPPLEMENTAL_QUERIES = (
-    "stroke AI emergency department paper {period}",
-    "sepsis AI emergency department paper {period}",
-    "ultrasound AI emergency medicine paper {period}",
-    "radiograph AI emergency department paper {period}",
-)
-
-PAPER_PRIORITY_DOMAINS = (
-    "pubmed.ncbi.nlm.nih.gov",
-    "pmc.ncbi.nlm.nih.gov",
-    "annemergmed.com",
-    "jmir.org",
-    "medinform.jmir.org",
-    "ai.nejm.org",
-    "nature.com",
-    "frontiersin.org",
-    "mdpi.com",
-    "sciencedirect.com",
-    "link.springer.com",
-    "biomedcentral.com",
-)
-
-PAPER_SITE_PASS_PATTERNS = (
-    'site:{domain} ("emergency department" OR triage OR EMS OR ambulance) (AI OR "machine learning") {period}',
-    'site:{domain} (stroke OR sepsis OR ultrasound OR radiograph) (AI OR "machine learning") (emergency OR "acute care") {period}',
-)
-
 
 def parse_date(value: str) -> str:
     datetime.strptime(value, "%Y-%m-%d")
@@ -165,7 +124,7 @@ def render_site_pass(domains: tuple[str, ...], templates: tuple[str, ...], perio
     return queries
 
 
-def build_payload(start_date: str, end_date: str, include_papers: bool = False) -> dict:
+def build_payload(start_date: str, end_date: str) -> dict:
     period = f"{start_date}..{end_date}"
     payload = {
         "period": {
@@ -194,25 +153,14 @@ def build_payload(start_date: str, end_date: str, include_papers: bool = False) 
             ),
         },
         "process_notes": [
-            "기본 수집은 국내/해외 기사 중심이다. 논문/프리프린트는 사용자가 요청한 경우에만 --include-papers로 별도 수집한다.",
-            "국내 기사 0건을 선언하기 전에 domestic.mandatory_domains 전체에 대한 site_pass_queries와 119/구급/응급실 운영 축 보조 검색을 최소 1회 수행한다.",
+            "기본 수집은 국내/해외 기사 원문 중심이다.",
+            "국내 기사 0건을 선언하기 전에 domestic.mandatory_domains 전체에 대한 site_pass_queries와 진료 AI/119·구급/문서화 축 보조 검색을 최소 1회 수행한다.",
             "뉴스 전용 검색 결과는 후보 시드로만 사용하고, 최종 포함 여부는 원문 URL 기준으로 판단한다.",
-            "트리아지는 제외하지 않되, 병상/환자흐름/문서화/상황관제/EMS/ePCR/도입·통합 축 검색을 함께 수행한다.",
+            "트리아지는 진료 AI 축으로 포함한다. 병상/환자흐름/전원 운영 쿼리와 일반 소방 AI/로봇/위원회 쿼리는 기본 국내 수집에서 제외한다.",
+            "해외 기본 수집에서도 patient flow/bed management/hospital command center 단독 쿼리는 제외하고 응급실/EMS/트리아지/임상 의사결정/현장 배치 맥락으로 좁힌다.",
             "후보 URL은 extract.py로 발행일과 본문을 검증한 뒤 verified_articles.json에 반영한다.",
         ],
     }
-    if include_papers:
-        payload["papers"] = {
-            "core_queries": render_queries(PAPER_CORE_QUERIES, period),
-            "supplemental_queries": render_queries(PAPER_SUPPLEMENTAL_QUERIES, period),
-            "priority_domains": list(PAPER_PRIORITY_DOMAINS),
-            "site_pass_queries": render_site_pass(
-                PAPER_PRIORITY_DOMAINS,
-                PAPER_SITE_PASS_PATTERNS,
-                period,
-            ),
-        }
-        payload["process_notes"].append("papers 섹션은 보조 검토용이며, 기사 후보가 충분하면 기본 산출물에서 제외한다.")
     return payload
 
 def to_text(payload: dict) -> str:
@@ -220,7 +168,7 @@ def to_text(payload: dict) -> str:
     period = payload["period"]["label"]
     lines.append(f"[Period] {period}")
     lines.append("")
-    for section_name in ("domestic", "overseas", "papers"):
+    for section_name in ("domestic", "overseas"):
         section = payload.get(section_name)
         if not isinstance(section, dict):
             continue
@@ -250,7 +198,6 @@ def main() -> None:
     parser.add_argument("--end-date", required=True)
     parser.add_argument("--format", choices=("json", "text"), default="json")
     parser.add_argument("--output", default="", help="optional output path")
-    parser.add_argument("--include-papers", action="store_true", help="include paper/preprint queries as optional backup")
     args = parser.parse_args()
 
     start_date = parse_date(args.start_date)
@@ -258,7 +205,7 @@ def main() -> None:
     if start_date > end_date:
         raise SystemExit("start-date must be <= end-date")
 
-    payload = build_payload(start_date, end_date, include_papers=args.include_papers)
+    payload = build_payload(start_date, end_date)
     rendered = to_text(payload) if args.format == "text" else json.dumps(payload, ensure_ascii=False, indent=2)
     if args.output:
         output_path = Path(args.output).resolve()
