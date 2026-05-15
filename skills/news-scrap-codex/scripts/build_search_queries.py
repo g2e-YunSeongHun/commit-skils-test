@@ -31,6 +31,11 @@ DOMESTIC_SUPPLEMENTAL_QUERIES = (
     "의료 AI 응급실 {period}",
     "의료 AI 응급환자 {period}",
     "의료 AI 중증환자 {period}",
+    "환자 악화 AI {period}",
+    "임상 악화 예측 AI {period}",
+    "입원 환자 악화 예측 AI {period}",
+    "조기경보점수 AI {period}",
+    "병동 모니터링 AI {period}",
     "응급실 음성인식 AI {period}",
     "응급실 생성형 AI {period}",
     "응급실 실사용 AI {period}",
@@ -55,6 +60,7 @@ DOMESTIC_MANDATORY_DOMAINS = (
 
 DOMESTIC_SITE_PASS_PATTERNS = (
     "site:{domain} (119 OR 구급 OR 응급실 OR 응급의료 OR 중증 OR 트리아지) (AI OR 인공지능 OR \"의료 AI\") {period}",
+    "site:{domain} (환자악화 OR \"환자 악화\" OR \"임상 악화\" OR 중증화 OR 조기경보 OR 조기경보점수 OR \"입원 환자\" OR \"일반 병동\" OR \"병동 모니터링\") (AI OR 인공지능 OR \"의료 AI\" OR \"예측 모델\") {period}",
     "site:{domain} (신고접수 OR 출동지령 OR 상황관제 OR 이송 OR 문서화 OR 진료기록 OR 음성인식) (AI OR 인공지능) (119 OR 응급 OR 응급실 OR 구급) {period}",
     "site:{domain} (도입 OR 적용 OR 활용 OR 실사용 OR 안착 OR 업무협약 OR 통합 OR 상용화 OR 수주) (AI OR 인공지능 OR \"의료 AI\") (응급 OR 응급실 OR 구급 OR 119 OR 중증 OR 트리아지 OR 환자분류) {period}",
     "site:{domain} (트리아지 OR 중증도 OR 분류 OR 예측 OR 뇌졸중 OR 심전도 OR CT OR POCUS) (AI OR 인공지능) (응급 OR 응급실 OR 중증 OR 구급) {period}",
@@ -78,6 +84,9 @@ OVERSEAS_SUPPLEMENTAL_QUERIES = (
     "AI clinical workflow platform EMS {period}",
     "emergency care AI partnership integration {period}",
     "emergency department AI documentation scribe {period}",
+    "patient deterioration AI ward monitoring {period}",
+    "clinical deterioration prediction AI early warning score {period}",
+    "inpatient deterioration AI ward monitoring {period}",
     "stroke AI emergency workflow {period}",
     "sepsis AI emergency department {period}",
     "POCUS AI emergency {period}",
@@ -102,6 +111,7 @@ OVERSEAS_PRIORITY_DOMAINS = (
 
 OVERSEAS_SITE_PASS_PATTERNS = (
     "site:{domain} (\"emergency department\" OR \"emergency medicine\" OR EMS OR ambulance OR 911) (AI OR \"artificial intelligence\" OR \"machine learning\") {period}",
+    "site:{domain} (\"patient deterioration\" OR \"clinical deterioration\" OR \"early warning score\" OR \"ward monitoring\" OR \"inpatient deterioration\" OR \"acute deterioration\") (AI OR \"artificial intelligence\" OR \"machine learning\" OR \"predictive model\") {period}",
     "site:{domain} (documentation OR ePCR OR dispatch OR routing OR \"ambient scribe\" OR scribe) (AI OR \"artificial intelligence\") (emergency OR EMS OR ambulance OR 911 OR \"emergency department\") {period}",
     "site:{domain} (deployment OR implementation OR adoption OR partnership OR integration OR rollout OR contract OR clearance OR launch) (AI OR \"artificial intelligence\") (EMS OR emergency OR ambulance OR 911 OR \"emergency department\" OR triage) {period}",
     "site:{domain} (triage OR stroke OR sepsis OR ultrasound OR POCUS OR radiology OR fracture) (AI OR \"artificial intelligence\") (emergency OR triage OR \"acute care\" OR EMS OR \"emergency department\") {period}",
@@ -154,10 +164,10 @@ def build_payload(start_date: str, end_date: str) -> dict:
         },
         "process_notes": [
             "기본 수집은 국내/해외 기사 원문 중심이다.",
-            "국내 기사 0건을 선언하기 전에 domestic.mandatory_domains 전체에 대한 site_pass_queries와 진료 AI/119·구급/문서화 축 보조 검색을 최소 1회 수행한다.",
+            "국내 기사 0건을 선언하기 전에 domestic.mandatory_domains 전체에 대한 site_pass_queries와 진료 AI/급성 악화 예측/119·구급/문서화 축 보조 검색을 최소 1회 수행한다.",
             "뉴스 전용 검색 결과는 후보 시드로만 사용하고, 최종 포함 여부는 원문 URL 기준으로 판단한다.",
-            "트리아지는 진료 AI 축으로 포함한다. 병상/환자흐름/전원 운영 쿼리와 일반 소방 AI/로봇/위원회 쿼리는 기본 국내 수집에서 제외한다.",
-            "해외 기본 수집에서도 patient flow/bed management/hospital command center 단독 쿼리는 제외하고 응급실/EMS/트리아지/임상 의사결정/현장 배치 맥락으로 좁힌다.",
+            "트리아지와 급성 악화/중증화 예측 AI는 진료 AI 축으로 포함한다. 병상/환자흐름/전원 운영 쿼리와 일반 소방 AI/로봇/위원회 쿼리는 기본 국내 수집에서 제외한다.",
+            "해외 기본 수집에서도 patient flow/bed management/hospital command center 단독 쿼리는 제외하고 응급실/EMS/트리아지/급성 악화 예측/임상 의사결정/현장 배치 맥락으로 좁힌다.",
             "후보 URL은 extract.py로 발행일과 본문을 검증한 뒤 verified_articles.json에 반영한다.",
         ],
     }

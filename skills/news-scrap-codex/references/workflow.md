@@ -14,12 +14,12 @@
 - raw search hit JSON 또는 URL 목록을 `scripts/scan_candidates.py`로 `candidates_raw.json`으로 정규화한다.
 - 검색 쿼리, 소스 우선순위, 필수 도메인 순회 규칙은 [search-rules.md](search-rules.md)를 따른다.
 - 국내 기사 `0건` 확정 전에는 국내 필수 도메인 전체에 대한 site-pass를 수행한다.
-- broad query에서 잡히지 않는 기사 보완을 위해 `응급의료 AI`, `응급실 AI`, `119 AI 신고접수`, `응급실 AI 문서화`, `응급 CT 판독 AI` 같은 진료/119·구급/문서화/질환 축 보조 쿼리를 추가 수행한다.
+- broad query에서 잡히지 않는 기사 보완을 위해 `응급의료 AI`, `응급실 AI`, `환자 악화 AI`, `임상 악화 예측 AI`, `119 AI 신고접수`, `응급실 AI 문서화`, `응급 CT 판독 AI` 같은 진료/급성 악화 예측/119·구급/문서화/질환 축 보조 쿼리를 추가 수행한다.
 
 ### 2. Freeze
 
 - `candidates_raw.json`에서 고득점 후보를 추려 `scripts/extract.py`로 검증한다.
-- 응급의료 직접 관련 기사만 남긴다.
+- 응급의료 또는 급성 악화/중증화 예측 직접 관련 기사만 남긴다.
 - 원문과 발행일을 확인한다.
 - 중복 URL과 중복 기사 제목을 정리한다.
 - `scripts/freeze_verified_articles.py`로 정렬과 건수 상한을 고정한다.

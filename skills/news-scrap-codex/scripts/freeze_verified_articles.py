@@ -28,6 +28,25 @@ EMERGENCY_KEYWORDS = (
     "trauma",
 )
 
+ACUTE_DETERIORATION_KEYWORDS = (
+    "환자 악화",
+    "환자악화",
+    "임상 악화",
+    "악화 예측",
+    "중증화",
+    "입원 환자",
+    "일반 병동",
+    "병동 모니터링",
+    "조기경보",
+    "조기경보점수",
+    "early warning score",
+    "patient deterioration",
+    "clinical deterioration",
+    "acute deterioration",
+    "inpatient deterioration",
+    "ward monitoring",
+)
+
 AI_KEYWORDS = (
     "ai",
     "인공지능",
@@ -256,8 +275,12 @@ def score_article(article: dict) -> int:
     combined = f"{title}\n{body}"
 
     score = 0
-    if contains_any(combined, EMERGENCY_KEYWORDS):
+    has_emergency_signal = contains_any(combined, EMERGENCY_KEYWORDS)
+    has_deterioration_signal = contains_any(combined, ACUTE_DETERIORATION_KEYWORDS)
+    if has_emergency_signal:
         score += 40
+    if has_deterioration_signal:
+        score += 34
     if contains_any(combined, AI_KEYWORDS):
         score += 25
     score += CATEGORY_WEIGHTS.get(category, 10)
@@ -265,7 +288,7 @@ def score_article(article: dict) -> int:
         score += 12
     if contains_any(combined, OPERATIONS_KEYWORDS):
         score += 10
-    if contains_any(combined, ACUTE_USECASE_KEYWORDS) and contains_any(combined, EMERGENCY_KEYWORDS):
+    if contains_any(combined, ACUTE_USECASE_KEYWORDS) and (has_emergency_signal or has_deterioration_signal):
         score += 5
     if related_org:
         score += 5

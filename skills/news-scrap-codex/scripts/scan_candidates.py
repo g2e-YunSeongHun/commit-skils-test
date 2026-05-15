@@ -109,6 +109,25 @@ EMERGENCY_KEYWORDS = (
     "trauma",
 )
 
+ACUTE_DETERIORATION_KEYWORDS = (
+    "환자 악화",
+    "환자악화",
+    "임상 악화",
+    "악화 예측",
+    "중증화",
+    "입원 환자",
+    "일반 병동",
+    "병동 모니터링",
+    "조기경보",
+    "조기경보점수",
+    "early warning score",
+    "patient deterioration",
+    "clinical deterioration",
+    "acute deterioration",
+    "inpatient deterioration",
+    "ward monitoring",
+)
+
 AI_KEYWORDS = (
     "ai",
     "인공지능",
@@ -261,6 +280,9 @@ def score_candidate(
     if contains_any(combined, EMERGENCY_KEYWORDS):
         score += 40
         reasons.append("emergency")
+    if contains_any(combined, ACUTE_DETERIORATION_KEYWORDS):
+        score += 34
+        reasons.append("acute_deterioration")
     if contains_any(combined, AI_KEYWORDS):
         score += 25
         reasons.append("ai")

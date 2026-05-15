@@ -21,14 +21,14 @@
 - 먼저 `python scripts/build_search_queries.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --format text`로 주차별 기사 중심 쿼리 세트를 만든다.
 - 넓은 검색으로 후보를 수집한 뒤, 국내는 `필수 도메인 순회`, 해외는 `우선 기사 도메인 순회`를 추가 수행한다.
 - 뉴스 전용 검색 결과나 포털 뉴스 결과는 후보 시드로만 사용한다. 최종 포함 여부는 반드시 원문 URL을 열어 판단한다.
-- 국내 기사 `0건`을 선언하기 전에 `국내 필수 도메인` 전체에 대한 site-pass와 `진료 AI/119·구급/문서화` 축 보조 검색을 수행한다.
+- 국내 기사 `0건`을 선언하기 전에 `국내 필수 도메인` 전체에 대한 site-pass와 `진료 AI/급성 악화 예측/119·구급/문서화` 축 보조 검색을 수행한다.
 
 ### 2. Verify
 
 - 후보 URL은 `python scripts/extract.py`로 본문과 발행일을 검증한다.
 - 발행일이 범위를 벗어나면 제외한다.
 - 원문 검증이 안 되는 재배포 단문은 제외한다.
-- 제목보다 본문이 더 중요하다. 제목이 질환명/제품명 중심이어도 본문에서 응급실, 응급치료, 구급 워크플로가 확인되면 포함 후보로 유지한다.
+- 제목보다 본문이 더 중요하다. 제목이 질환명/제품명 중심이어도 본문에서 응급실, 응급치료, 구급 워크플로, 급성 악화/중증화 예측 맥락이 확인되면 포함 후보로 유지한다.
 
 ### 3. Freeze
 
@@ -41,8 +41,8 @@
 
 아래 키워드 중 하나 이상이 기사 제목 또는 본문 핵심에 직접 등장해야 한다.
 
-- 국문: `응급`, `응급실`, `응급의료`, `구급`, `119`, `중증`, `트리아지`
-- 영문: `emergency`, `emergency department`, `ED`, `acute care`, `triage`, `ambulance`, `EMS`, `911`, `prehospital`, `trauma`
+- 국문: `응급`, `응급실`, `응급의료`, `구급`, `119`, `중증`, `트리아지`, `환자 악화`, `임상 악화`, `중증화`, `입원 환자 악화`, `조기경보점수`, `병동 모니터링`
+- 영문: `emergency`, `emergency department`, `ED`, `acute care`, `triage`, `ambulance`, `EMS`, `911`, `prehospital`, `trauma`, `patient deterioration`, `clinical deterioration`, `early warning score`, `ward monitoring`, `inpatient deterioration`
 
 보완 규칙:
 
@@ -50,6 +50,7 @@
 - `뇌졸중 AI`, `뇌출혈 AI`, `CT/MR 판독 AI`, `POCUS AI`, `심전도 AI`처럼 질환/제품 축으로 노출된 기사라도 본문에서 응급 치료 판단, 응급 환자 대응, 응급실/구급 워크플로가 확인되면 포함 후보로 유지한다.
 - 반대로 `의료 AI`나 `영상 AI`만 언급되고 응급의료 문맥이 약하면 제외한다.
 - `트리아지`는 `응급의료/응급실 진료 AI` 축에 포함한다. 다만 `의료 AI` 단독 검색은 너무 넓으므로 `응급`, `응급실`, `119`, `구급`, `중증`, `트리아지`, `환자분류` 같은 응급 문맥어와 함께 사용할 때만 보조 검색으로 수행한다.
+- `환자 악화`, `임상 악화`, `입원 환자 악화`, `조기경보점수`, `병동 모니터링`은 응급실 이전 또는 중환자실 전 단계의 급성 악화 위험 포착 기사로 포함 후보에 둔다. 단순 병동 운영 자동화나 일반 건강 모니터링은 제외한다.
 
 ## AI 관련성 기준
 
@@ -60,9 +61,10 @@
 
 ## 검색 쿼리 구성
 
-국내 검색은 3개 묶음으로 수행한다.
+국내 검색은 4개 묶음으로 수행한다.
 
 - 응급의료/응급실 진료 AI: `응급의료 AI`, `응급실 AI`, `응급환자 AI 트리아지`, `중증환자 AI 분류`, `응급 CT AI 판독`, `뇌졸중 AI 응급`, `심전도 AI 구급`, `POCUS AI 응급`
+- 급성 악화/중증화 예측 AI: `환자 악화 AI`, `임상 악화 예측 AI`, `입원 환자 악화 예측 AI`, `조기경보점수 AI`, `병동 모니터링 AI`
 - 119/구급 현장 AI: `119 AI 신고접수`, `119 AI 출동지령`, `119 AI 상황관제`, `구급대 AI`, `소방청 AI 119`, `소방청 AI 구급`
 - 응급실 문서화/업무부담 AI: `응급실 AI 문서화`, `응급실 AI 진료기록`, `응급실 음성인식 AI`, `응급실 생성형 AI`, `응급실 실사용 AI`
 
@@ -77,12 +79,13 @@
 - `응급실 AI 병상 배정`, `응급실 AI 환자 흐름`, `응급의료센터 AI 운영 시스템`, `응급 협진 AI 전원 조정`
 - `소방 AI`, `AI 로봇`, `AI 기술위원회`처럼 119/구급/응급의료 워크플로가 제목 또는 본문 핵심에 없는 일반 소방·재난 기술 기사
 
-해외 검색은 4개 묶음으로 수행한다.
+해외 검색은 5개 묶음으로 수행한다.
 
 - EMS/911: `EMS AI documentation ePCR`, `911 AI dispatch emergency medical services`, `ambulance AI routing dispatch`, `EMS AI protocol platform`
 - 문서화/업무부담: `emergency department ambient AI scribe`, `AI documentation emergency department`
 - 도입/상용화: `emergency care AI deployment news`, `emergency care AI partnership integration`, `AI clinical workflow platform EMS`
 - 임상 보조/트리아지: `emergency department AI triage`, `emergency department AI clinical decision support deployment`, `AI fracture triage emergency department clearance`, `stroke AI emergency workflow`, `sepsis AI emergency department`, `POCUS AI emergency`
+- 급성 악화/병동 모니터링: `patient deterioration AI ward monitoring`, `clinical deterioration prediction AI early warning score`, `inpatient deterioration AI ward monitoring`
 
 `patient flow`, `bed management`, `hospital command center`는 기본 해외 수집에서 제외한다. 사용자가 응급실 운영/병상/전원 축까지 넓히라고 명시할 때만 fallback으로 검토한다.
 
@@ -130,6 +133,7 @@
 - 응급의료와 직접 관련 없는 일반 헬스케어 AI 기사
 - 119/구급/응급의료 워크플로가 확인되지 않는 일반 소방 AI, 로봇, 위원회, 조직 신설 기사
 - 응급의료 직접성이 약한 병상 배정, 환자 흐름, 전원 조정, 병원 운영 자동화 기사
+- 단, 환자 악화/중증화 예측, 조기경보점수, 중환자실 전 단계 위험 포착이 본문 핵심이면 병동 기반 기사라도 제외하지 않는다.
 - 해외 기본 모드에서 `patient flow`, `bed management`, `hospital command center`만 핵심인 병원 운영 기사
 - 기사 원문 확인이 어려운 단문 재배포 기사
 - 날짜가 범위를 벗어난 기사
@@ -140,7 +144,7 @@
 
 여러 기사가 비슷하면 아래 순서로 선택한다.
 
-1. 응급의료 직접성
+1. 응급의료 또는 급성 악화 예측 직접성
 2. 실제 도입 또는 운영 여부
 3. 신규성: 이전 주차에 이미 다룬 같은 제품/사업 발표가 아닌지
 4. 기관 신뢰도
