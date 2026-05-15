@@ -60,9 +60,9 @@ description: Claude용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when 
 6. 고득점 후보 URL을 **WebFetch**로 열어 본문과 발행일을 검증한다.
 7. 검증 통과 기사만 남겨 점수화·정렬·건수 상한을 적용하고 `verified_articles.json`으로 저장한다.
 8. `verified_articles.json`에서 기사별 텍스트 파일(`sources/*.txt`)과 `notebook_manifest.json`을 Claude Write 도구로 생성한다.
-9. `python scripts/notebooklm_gate.py <run_dir>/notebook_manifest.json --output-dir <run_dir>`를 실행한다.
-10. `python scripts/render_dashboard.py <verified_json> <run_dir>/notebooklm_outputs.json <run_dir>/news_<week_id>.html <run_dir>/featured_article.json`를 실행한다.
-11. `python scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_outputs.json <verified_json> --output-dir <run_dir>`를 실행한다.
+9. `python skills/news-scrap-claude/scripts/notebooklm_gate.py <run_dir>/notebook_manifest.json --output-dir <run_dir>`를 실행한다.
+10. `python skills/news-scrap-claude/scripts/render_dashboard.py <verified_json> <run_dir>/notebooklm_outputs.json <run_dir>/news_<week_id>.html <run_dir>/featured_article.json`를 실행한다.
+11. `python skills/news-scrap-claude/scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_outputs.json <verified_json> --output-dir <run_dir>`를 실행한다.
 12. 결과물이 템플릿에서 벗어나면 `notebooklm_slide_deck.py`를 다시 실행하거나 NotebookLM `revise-slide`를 추가 적용한다.
 
 ## 무엇을 읽을지

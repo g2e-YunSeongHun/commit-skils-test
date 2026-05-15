@@ -24,6 +24,16 @@
 - [search-rules.md](search-rules.md)의 점수화·정렬 규칙을 적용해 건수 상한을 고정한다.
 - 결과를 `verified_articles.json`으로 저장한다.
 
+#### WebFetch 403 처리 규칙
+
+일부 해외 도메인(`healthcareitnews.com`, `beckershospitalreview.com`, `fiercehealthcare.com` 등)은 WebFetch를 차단한다. 이 경우:
+
+1. 검색 결과 스니펫에서 발행일과 핵심 내용을 추출한다.
+2. 스니펫에서 발행일이 확인되고 응급의료 AI 직접 관련성이 명확하면 `snippet_verified: true`로 표시해 후보에 포함한다.
+3. 스니펫으로 발행일을 확인할 수 없으면 제외한다.
+4. `verified_articles.json`의 해당 기사에 `"verified_method": "snippet"` 필드를 추가해 구분한다.
+5. snippet 검증 기사는 건수 상한에 포함하되, 동점이면 WebFetch로 전문 검증된 기사를 우선한다.
+
 ### 3. Build Manifest (Claude Write)
 
 - `verified_articles.json`의 각 기사를 개별 텍스트 파일(`sources/<순번>_<제목>.txt`)로 저장한다.
