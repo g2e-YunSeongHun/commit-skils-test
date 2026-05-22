@@ -75,112 +75,45 @@ def write_failure(
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def get_question(outputs: dict, question_id: str) -> dict | None:
-    for item in outputs.get("questions", []):
-        if item.get("id") == question_id:
-            return item
-    return None
-
-
-def get_articles(payload: dict) -> list[tuple[str, dict]]:
-    items_out: list[tuple[str, dict]] = []
-    for section_name in ("국내기사", "해외기사", "domestic_articles", "overseas_articles"):
-        value = payload.get(section_name)
-        if not isinstance(value, list):
-            continue
-        label = "국내기사" if "국내" in section_name or section_name == "domestic_articles" else "해외기사"
-        for item in value:
-            if isinstance(item, dict):
-                items_out.append((label, item))
-    return items_out
-
-
-def get_text(article: dict, *keys: str) -> str:
-    for key in keys:
-        value = article.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return ""
-
-
 def normalize(text: str) -> str:
     return "".join(re.findall(r"[0-9A-Za-z가-힣]+", text)).lower()
 
 
-def token_score(answer: str, title: str, media: str) -> int:
-    answer_norm = normalize(answer)
-    title_norm = normalize(title)
-    score = 0
-    if title_norm and title_norm in answer_norm:
-        score += 1000 + len(title_norm)
-    for token in re.findall(r"[0-9A-Za-z가-힣]{2,}", title):
-        token_norm = normalize(token)
-        if token_norm and token_norm in answer_norm:
-            score += len(token_norm) * 5
-    media_norm = normalize(media)
-    if media_norm and media_norm in answer_norm:
-        score += 20
-    return score
+def resolve_featured_source_id(featured: dict, session: dict) -> str:
+    existing = str(featured.get("source_id", "")).strip()
+    if existing:
+        return existing
 
+    sources = [source for source in session.get("sources", []) if isinstance(source, dict)]
+    for source in sources:
+        if str(source.get("source_kind", "")).strip() == "featured_deck_source":
+            return str(source.get("source_id") or source.get("id") or "").strip()
 
-def parse_featured_answer(answer: str) -> dict:
-    parsed: dict[str, str] = {}
-    for line in answer.splitlines():
-        if ":" not in line:
+    featured_link = str(featured.get("link", "")).strip()
+    featured_title = normalize(str(featured.get("title", "")))
+    for source in sources:
+        source_id = str(source.get("source_id") or source.get("id") or "").strip()
+        if not source_id:
             continue
-        key, value = line.split(":", 1)
-        parsed[key.strip().upper()] = value.strip()
-    return {
-        "title": parsed.get("TITLE", ""),
-        "media": parsed.get("MEDIA", ""),
-        "date": parsed.get("DATE", ""),
-        "reason": parsed.get("REASON", ""),
-    }
+        if featured_link and featured_link == str(source.get("link", "")).strip():
+            return source_id
+        source_title = normalize(str(source.get("article_title") or source.get("title") or ""))
+        if featured_title and source_title and (featured_title == source_title or featured_title in source_title or source_title in featured_title):
+            return source_id
+
+    if len(sources) == 1:
+        return str(sources[0].get("source_id") or sources[0].get("id") or "").strip()
+    return ""
 
 
-def choose_featured_article(verified: dict, outputs: dict) -> dict:
-    q6 = get_question(outputs, "Q6")
-    q4 = get_question(outputs, "Q4")
-    answer = ""
-    parsed = {}
-    if q6 and isinstance(q6.get("answer"), str):
-        answer = q6["answer"]
-        parsed = parse_featured_answer(answer)
-    elif q4 and isinstance(q4.get("answer"), str):
-        answer = q4["answer"]
-
-    best_score = -1
-    best_article: dict | None = None
-    for section, article in get_articles(verified):
-        title = get_text(article, "제목", "title")
-        media = get_text(article, "기관/매체", "매체", "media")
-        score = 0
-        if parsed.get("title"):
-            score += token_score(parsed["title"], title, media) * 2
-        if answer:
-            score += token_score(answer, title, media)
-        if score > best_score:
-            best_score = score
-            best_article = {
-                "title": title,
-                "media": media,
-                "date": get_text(article, "날짜", "date"),
-                "section": section,
-                "related_org": get_text(article, "관련기관", "related_org", "organization"),
-                "link": get_text(article, "링크", "link", "url"),
-                "reason": parsed.get("reason") or (q4.get("answer", "") if q4 else ""),
-            }
-
-    if not best_article:
-        raise SlideDeckError("featured_article", "대표 기사를 선택할 수 없습니다.")
-
-    best_source_id = ""
-    for source in outputs.get("sources", []):
-        if normalize(str(source.get("article_title", ""))) == normalize(best_article["title"]):
-            best_source_id = str(source.get("source_id", "")).strip()
-            break
-    best_article["source_id"] = best_source_id
-    return best_article
+def load_featured_article(path: Path, session: dict) -> dict:
+    featured = load_json(path)
+    if not isinstance(featured, dict):
+        raise SlideDeckError("featured_article", "featured_article_json 형식이 올바르지 않습니다.")
+    if not str(featured.get("title", "")).strip():
+        raise SlideDeckError("featured_article", "featured_article_json 에 title 이 없습니다.")
+    featured["source_id"] = resolve_featured_source_id(featured, session)
+    return featured
 
 
 def read_prompt_section(path: Path, name: str) -> str:
@@ -309,17 +242,16 @@ def download_slide_deck(notebook_id: str, artifact_id: str, output_path: Path, f
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("notebooklm_outputs_json")
-    parser.add_argument("verified_json")
+    parser.add_argument("notebooklm_session_json")
+    parser.add_argument("--featured-article-json", required=True)
     parser.add_argument("--output-dir", default="")
     parser.add_argument("--prompt-file", default="")
     parser.add_argument("--artifact-id", default="")
     parser.add_argument("--skip-revisions", action="store_true")
     args = parser.parse_args()
 
-    outputs_path = Path(args.notebooklm_outputs_json).resolve()
-    verified_path = Path(args.verified_json).resolve()
-    output_dir = Path(args.output_dir).resolve() if args.output_dir else outputs_path.parent
+    session_path = Path(args.notebooklm_session_json).resolve()
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else session_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
     prompt_path = (
@@ -330,19 +262,18 @@ def main() -> None:
 
     notebook_id = ""
     try:
-        outputs = load_json(outputs_path)
-        verified = load_json(verified_path)
-        notebook = outputs.get("notebook", {})
+        session = load_json(session_path)
+        notebook = session.get("notebook", {})
         notebook_id = str(notebook.get("id", "")).strip()
         if not notebook_id:
-            raise SlideDeckError("inputs", "notebooklm_outputs.json 에 notebook.id 가 없습니다.")
+            raise SlideDeckError("inputs", "notebooklm_session.json 에 notebook.id 가 없습니다.")
 
-        featured = choose_featured_article(verified, outputs)
+        featured = load_featured_article(Path(args.featured_article_json).resolve(), session)
         featured_path = output_dir / "featured_article.json"
         featured_path.write_text(json.dumps(featured, ensure_ascii=False, indent=2), encoding="utf-8")
 
         values = {
-            "WEEK_ID": str(outputs.get("week_id", verified_path.stem.replace("verified_articles_", ""))),
+            "WEEK_ID": str(session.get("week_id", session_path.parent.name)),
             "FEATURED_TITLE": featured.get("title", ""),
             "FEATURED_MEDIA": featured.get("media", ""),
             "FEATURED_DATE": featured.get("date", ""),

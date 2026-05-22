@@ -13,8 +13,14 @@ GENERATED_FILES = {
     "candidates_raw.json",
     "verified_articles.json",
     "notebook_manifest.json",
+    "notebooklm_session.json",
+    # Legacy artifact from the pre-refactor NotebookLM analysis flow.
     "notebooklm_outputs.json",
     "featured_article.json",
+    "selection_report.json",
+    "article_summaries.json",
+    "featured_research.md",
+    "featured_research.json",
     "slide_deck_artifact.json",
     "notebooklm_failure.json",
 }

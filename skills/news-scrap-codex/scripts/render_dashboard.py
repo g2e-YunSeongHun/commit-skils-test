@@ -7,7 +7,6 @@ import html
 import json
 import re
 import sys
-from collections import Counter
 from pathlib import Path
 
 
@@ -35,13 +34,6 @@ def get_text(data: dict, *keys: str) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
-
-
-def get_question(outputs: dict, question_id: str) -> dict:
-    for item in outputs.get("questions", []):
-        if item.get("id") == question_id:
-            return item
-    return {}
 
 
 def strip_citations(text: str) -> str:
@@ -90,10 +82,6 @@ def first_sentences(text: str, max_sentences: int = 4, max_chars: int = 700) -> 
     return snippet
 
 
-def normalize_key(text: str) -> str:
-    return re.sub(r"[^0-9a-z가-힣]+", "", strip_citations(str(text or "")).lower())
-
-
 def collect_articles(verified: dict) -> tuple[list[dict], list[dict]]:
     domestic = verified.get("국내기사")
     if not isinstance(domestic, list):
@@ -124,171 +112,7 @@ def get_article_original_title(article: dict) -> str:
     return ""
 
 
-def build_output_source_lookup(outputs: dict) -> dict[str, str]:
-    lookup: dict[str, str] = {}
-    for source in outputs.get("sources", []):
-        if not isinstance(source, dict):
-            continue
-        source_id = get_text(source, "source_id", "id")
-        if not source_id:
-            continue
-        for link_key in ("link", "url"):
-            link = get_text(source, link_key)
-            if link:
-                lookup[f"link:{link.strip()}"] = source_id
-        for title_key in ("article_title", "title"):
-            title = get_text(source, title_key)
-            if title:
-                lookup[f"title:{normalize_key(title)}"] = source_id
-    return lookup
-
-
-def parse_q0_blocks(answer: str) -> list[dict[str, str | int]]:
-    structured_pattern = re.compile(
-        r"(?ms)^\s*ARTICLE_INDEX:\s*(\d+)\s*\nTITLE:\s*(.+?)\s*\nSUMMARY:\s*(.*?)(?=^\s*ARTICLE_INDEX:\s*\d+\s*$|\Z)"
-    )
-    structured_blocks: list[dict[str, str | int]] = []
-    for match in structured_pattern.finditer(answer or ""):
-        structured_blocks.append(
-            {
-                "index": int(match.group(1)),
-                "heading": normalize_whitespace(strip_article_label(match.group(2))),
-                "body": match.group(3).strip(),
-            }
-        )
-    if structured_blocks:
-        return structured_blocks
-
-    pattern = re.compile(
-        r"(?ms)^\s*\*{0,2}\s*(?:기사\s*)?(\d+)\s*[:.]\s*(.+?)\s*\*{0,2}\s*\n(.*?)(?=^\s*\*{0,2}\s*(?:기사\s*)?\d+\s*[:.]\s+|\Z)"
-    )
-    blocks: list[dict[str, str | int]] = []
-    for match in pattern.finditer(answer or ""):
-        heading = normalize_whitespace(strip_article_label(match.group(2)))
-        body = match.group(3).strip()
-        blocks.append(
-            {
-                "index": int(match.group(1)),
-                "heading": heading,
-                "body": body,
-            }
-        )
-    if blocks:
-        return blocks
-
-    fallback_blocks = [
-        chunk.strip() for chunk in re.split(r"\n\s*\n", answer or "") if chunk.strip()
-    ]
-    for index, chunk in enumerate(fallback_blocks, start=1):
-        blocks.append({"index": index, "heading": "", "body": chunk})
-    return blocks
-
-
-def build_citation_source_map(question: dict) -> dict[str, str]:
-    citation_map: dict[str, str] = {}
-    for reference in question.get("references", []):
-        if not isinstance(reference, dict):
-            continue
-        citation_number = reference.get("citation_number")
-        source_id = get_text(reference, "source_id")
-        if citation_number is None or not source_id:
-            continue
-        citation_map[str(citation_number)] = source_id
-    return citation_map
-
-
-def choose_source_for_block(
-    block: dict[str, str | int],
-    citation_map: dict[str, str],
-    output_sources: list[dict],
-) -> str:
-    citations = re.findall(r"\[(\d+)\]", str(block.get("body", "")))
-    counted = Counter(citation_map[number] for number in citations if number in citation_map)
-    if counted:
-        return counted.most_common(1)[0][0]
-
-    ordered_source_map = {
-        str(index): get_text(source, "source_id", "id")
-        for index, source in enumerate(output_sources, start=1)
-        if isinstance(source, dict) and get_text(source, "source_id", "id")
-    }
-    ordered_counts = Counter(
-        ordered_source_map[number] for number in citations if number in ordered_source_map
-    )
-    if ordered_counts:
-        return ordered_counts.most_common(1)[0][0]
-
-    heading_key = normalize_key(str(block.get("heading", "")))
-    if not heading_key:
-        return ""
-
-    best_source_id = ""
-    best_score = 0
-    heading_tokens = set(re.findall(r"[0-9a-z가-힣]{2,}", heading_key))
-    for source in output_sources:
-        if not isinstance(source, dict):
-            continue
-        source_id = get_text(source, "source_id", "id")
-        if not source_id:
-            continue
-        candidate_title = get_text(source, "article_title", "title")
-        candidate_key = normalize_key(candidate_title)
-        if not candidate_key:
-            continue
-        if heading_key in candidate_key or candidate_key in heading_key:
-            score = 100
-        else:
-            candidate_tokens = set(re.findall(r"[0-9a-z가-힣]{2,}", candidate_key))
-            score = len(heading_tokens & candidate_tokens)
-        if score > best_score:
-            best_score = score
-            best_source_id = source_id
-    return best_source_id
-
-
-def extract_q0_summary_by_source(outputs: dict) -> dict[str, str]:
-    q0 = get_question(outputs, "Q0")
-    answer = get_text(q0, "answer")
-    if not answer:
-        return {}
-
-    citation_map = build_citation_source_map(q0)
-    output_sources = outputs.get("sources", [])
-    summaries: dict[str, str] = {}
-
-    for block in parse_q0_blocks(answer):
-        source_id = choose_source_for_block(block, citation_map, output_sources)
-        if not source_id:
-            continue
-        body = clean_summary_text(str(block.get("body", "")))
-        if not body:
-            continue
-        summaries[source_id] = first_sentences(body, max_sentences=5, max_chars=900)
-    return summaries
-
-
-def get_article_source_id(article: dict, source_lookup: dict[str, str]) -> str:
-    link = get_text(article, "링크", "link", "url")
-    if link:
-        source_id = source_lookup.get(f"link:{link.strip()}")
-        if source_id:
-            return source_id
-
-    title_candidates = (
-        get_text(article, "원제목", "original_title"),
-        get_text(article, "제목", "title"),
-        get_text(article, "번역제목", "translated_title"),
-    )
-    for title in title_candidates:
-        if not title:
-            continue
-        source_id = source_lookup.get(f"title:{normalize_key(title)}")
-        if source_id:
-            return source_id
-    return ""
-
-
-def render_article(article: dict, source_lookup: dict[str, str], q0_summaries: dict[str, str]) -> str:
+def render_article(article: dict) -> str:
     title = esc(get_article_title(article))
     original_title = get_article_original_title(article)
     original_block = ""
@@ -332,14 +156,10 @@ def render_article(article: dict, source_lookup: dict[str, str], q0_summaries: d
 </details>"""
 
 
-def build_article_list(
-    articles: list[dict], source_lookup: dict[str, str], q0_summaries: dict[str, str]
-) -> str:
+def build_article_list(articles: list[dict]) -> str:
     if not articles:
         return '<div class="empty-notice">수집된 기사가 없습니다.</div>'
-    return "\n\n".join(
-        render_article(article, source_lookup, q0_summaries) for article in articles
-    )
+    return "\n\n".join(render_article(article) for article in articles)
 
 
 def render_template(template: str, replacements: dict[str, str]) -> str:
@@ -358,24 +178,20 @@ def resolve_template_path(extra_args: list[str]) -> Path:
 
 
 def main() -> None:
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(
-            "Usage: python render_dashboard.py <verified_json> <notebooklm_outputs_json> <output_html_path> [featured_article_json] [template_path]"
+            "Usage: python render_dashboard.py <verified_json> <output_html_path> [template_path]"
         )
         sys.exit(1)
 
     verified_path = Path(sys.argv[1]).resolve()
-    outputs_path = Path(sys.argv[2]).resolve()
-    output_path = Path(sys.argv[3]).resolve()
-    template_path = resolve_template_path(sys.argv[4:])
+    output_path = Path(sys.argv[2]).resolve()
+    template_path = resolve_template_path(sys.argv[3:])
 
     verified = load_json(verified_path)
-    outputs = load_json(outputs_path)
     template = template_path.read_text(encoding="utf-8")
 
     domestic_articles, overseas_articles = collect_articles(verified)
-    source_lookup = build_output_source_lookup(outputs)
-    q0_summaries = extract_q0_summary_by_source(outputs)
 
     replacements = {
         "{{page_title}}": "응급의료 AI 주간 브리핑",
@@ -384,16 +200,8 @@ def main() -> None:
         "{{total_count}}": str(len(domestic_articles) + len(overseas_articles)),
         "{{domestic_count}}": str(len(domestic_articles)),
         "{{overseas_count}}": str(len(overseas_articles)),
-        "{{domestic_articles}}": build_article_list(
-            domestic_articles,
-            source_lookup,
-            q0_summaries,
-        ),
-        "{{overseas_articles}}": build_article_list(
-            overseas_articles,
-            source_lookup,
-            q0_summaries,
-        ),
+        "{{domestic_articles}}": build_article_list(domestic_articles),
+        "{{overseas_articles}}": build_article_list(overseas_articles),
     }
 
     rendered = render_template(template, replacements)

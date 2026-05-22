@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the required NotebookLM gate and save Q0-Q6 outputs."""
+"""Create a NotebookLM note, upload slide-deck sources, and save session metadata."""
 
 from __future__ import annotations
 
@@ -10,45 +10,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
-
-PROMPTS = [
-    {
-        "id": "Q0",
-        "note_title_prefix": "Q0_기사별요약",
-        "question": "제공된 소스만 근거로 기사별 상세 요약을 작성해줘. 아래 형식을 기사 수만큼 반복하고 다른 서문이나 결론은 쓰지 마. 각 SUMMARY는 4~5문장으로 누가, 무엇을, 왜, 어떻게를 포함하고 추정은 하지 마. 굵게 표시, 불릿, 번호 목록, '기사 1:' 같은 장식 문구는 쓰지 마.\nARTICLE_INDEX: 1\nTITLE: 기사 제목\nSUMMARY: 요약문",
-    },
-    {
-        "id": "Q1",
-        "note_title_prefix": "Q1_주간동향",
-        "question": "제공된 소스만 근거로 이번 주 응급의료 AI 동향 3가지를 정리해줘. 각 항목은 2문장 이내로 쓰고 중복 표현을 줄여줘.",
-    },
-    {
-        "id": "Q2",
-        "note_title_prefix": "Q2_AI개발주체",
-        "question": "제공된 소스만 근거로 이번 주 주목할 AI 기술 개발사, 보유 주체, 또는 핵심 제품 주체를 최대 4개만 골라줘. 단순 도입 기관, 사용 병원, 매체, 평가 수행 기관은 제외하고 실제로 AI 기술을 개발했거나 보유하거나 제공하는 주체만 포함해줘. 각 항목은 '주체명 / 기술 또는 제품명 / 해당 기술이 무엇을 하는지'가 드러나게 2문장 이내로 설명해줘.",
-    },
-    {
-        "id": "Q3",
-        "note_title_prefix": "Q3_시사점",
-        "question": "제공된 소스만 근거로 응급의료 AI 관점의 시사점 3가지를 정리해줘. 홍보 문구 대신 도입 방식, 검증 방식, 운영상 의미에 초점을 맞춰줘.",
-    },
-    {
-        "id": "Q4",
-        "note_title_prefix": "Q4_대표기사선정",
-        "question": "제공된 소스만 근거로 이번 주 대표 기사 1건과 선정 이유를 설명해줘. 추가 리서치가 필요한 기관이나 기업이 있다면 2~3곳만 덧붙여줘.",
-    },
-    {
-        "id": "Q5",
-        "note_title_prefix": "Q5_출력초안",
-        "question": "제공된 소스만 근거로 주간 브리핑 핵심 요약과 발표용 핵심 포인트 초안을 작성해줘. 없는 정보는 쓰지 마.",
-    },
-    {
-        "id": "Q6",
-        "note_title_prefix": "Q6_대표기사",
-        "question": "Q4에서 선정한 대표 기사 1건을 아래 4줄 형식으로만 답해줘.\nTITLE: 기사 제목\nMEDIA: 매체명\nDATE: YYYY-MM-DD 또는 미상\nREASON: 선정 이유",
-    },
-]
 
 
 NOTEBOOKLM_AUTO_LOGIN_TIMEOUT_SECONDS = int(os.getenv("NOTEBOOKLM_AUTO_LOGIN_TIMEOUT", "300"))
@@ -254,32 +215,6 @@ def wait_source(notebook_id: str, source_id: str) -> None:
         raise GateError("source_wait", f"소스 준비 실패: {source_id}", command)
 
 
-def ask_question(notebook_id: str, source_ids: list[str], week_id: str, prompt: dict) -> dict:
-    command = ["notebooklm", "ask", "-n", notebook_id]
-    for source_id in source_ids:
-        command.extend(["-s", source_id])
-    command.extend(
-        [
-            "--json",
-            "--save-as-note",
-            "--note-title",
-            f"{prompt['note_title_prefix']}_{week_id}",
-            prompt["question"],
-        ]
-    )
-    data = run_command(command, step="ask")
-    answer = data.get("answer")
-    if not isinstance(answer, str) or not answer.strip():
-        raise GateError("ask", f"{prompt['id']} 응답이 비어 있습니다.", command)
-    return {
-        "id": prompt["id"],
-        "note_title": f"{prompt['note_title_prefix']}_{week_id}",
-        "question": prompt["question"],
-        "answer": answer.strip(),
-        "references": data.get("references", []),
-    }
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest_json")
@@ -298,32 +233,28 @@ def main() -> None:
         notebook_id = notebook["id"]
 
         sources_out: list[dict] = []
-        source_ids: list[str] = []
         for source in manifest.get("sources", []):
             added = add_source(notebook_id, source)
             wait_source(notebook_id, added["id"])
-            sources_out.append(
-                {
-                    "source_id": added["id"],
-                    "title": source["title"],
-                    "file_path": source["file_path"],
-                    "section": source["section"],
-                    "article_title": source["article_title"],
-                    "date": source["date"],
-                    "link": source["link"],
-                }
-            )
-            source_ids.append(added["id"])
-
-        results = [ask_question(notebook_id, source_ids, manifest["week_id"], prompt) for prompt in PROMPTS]
+            source_record = {
+                "source_id": added["id"],
+                "title": source["title"],
+                "file_path": source["file_path"],
+                "section": source["section"],
+                "article_title": source["article_title"],
+                "date": source["date"],
+                "link": source["link"],
+            }
+            if source.get("source_kind"):
+                source_record["source_kind"] = source["source_kind"]
+            sources_out.append(source_record)
 
         payload = {
             "week_id": manifest["week_id"],
             "notebook": {"id": notebook["id"], "title": notebook["title"]},
             "sources": sources_out,
-            "questions": results,
         }
-        output_path = output_dir / "notebooklm_outputs.json"
+        output_path = output_dir / "notebooklm_session.json"
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"DONE:{output_path}")
     except GateError as error:

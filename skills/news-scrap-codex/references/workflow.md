@@ -2,7 +2,7 @@
 
 ## 목표
 
-`news-scrap-codex`는 주간 응급의료 AI 기사 묶음을 검증된 JSON으로 고정한 뒤, NotebookLM으로 분석하고, 최종 슬라이드를 NotebookLM `slide-deck`로 생성한다.
+`news-scrap-codex`는 주간 응급의료 AI 기사 묶음을 검증된 JSON으로 고정한 뒤, Codex가 요약·대표 기사 선정·심층 리서치를 수행하고, NotebookLM은 최종 `slide-deck` 생성에만 사용한다.
 
 ## 단계
 
@@ -25,25 +25,35 @@
 - `scripts/freeze_verified_articles.py`로 정렬과 건수 상한을 고정한다.
 - 결과를 `verified_articles.json`으로 저장한다.
 
-### 3. Build Manifest
+### 3. Codex Selection
 
-- `scripts/build_notebook_sources.py`를 실행한다.
-- 기사별 텍스트 파일과 `notebook_manifest.json`을 만든다.
+- `scripts/select_featured_article.py`를 실행한다.
+- `featured_article.json`, `selection_report.json`, `article_summaries.json`을 만든다.
+- 대표 기사 선정 기준은 응급의료 직접성, AI 역할 명확성, 도입/검증/제품화 구체성, 소스 완결성, 주간 대표성이다.
+- NotebookLM에는 대표 기사 선정을 맡기지 않는다.
 
-### 4. NotebookLM Gate
+### 4. Focused Research
 
-- `scripts/notebooklm_gate.py`를 실행한다.
-- 새 NotebookLM 노트를 만든다.
-- 모든 기사 텍스트를 업로드하고 `ready` 상태를 기다린다.
-- Q0~Q6 질문을 실행해 `notebooklm_outputs.json`을 만든다.
-- Q6은 대표 기사 제목을 기계적으로 읽을 수 있는 형식으로 남긴다.
+- Codex가 대표 기사에 대해 심층 리서치를 수행한다.
+- 리서치 대상은 대표 기사에 등장한 핵심 기관, 기업, 기술명, 제품명, 연구명이다.
+- 공식 발표, 논문, 제품 페이지, 규제·인허가 자료, 병원·기관 공지를 우선한다.
+- 결과를 `<run_dir>/featured_research.md`에 한국어로 정리한다.
+- 리서치 내용에는 확인한 사실, 근거 URL, 슬라이드에 쓸 수 있는 시사점, 아직 불확실한 지점을 분리한다.
 
-### 5. Slide Deck
+### 5. Dashboard
 
-- `scripts/render_dashboard.py`를 먼저 실행한다.
-- `verified_articles.json`과 `notebooklm_outputs.json`을 바탕으로 `news_<week_id>.html`을 만든다.
+- `scripts/render_dashboard.py`를 실행한다.
+- `verified_articles.json`만으로 `news_<week_id>.html`을 만든다.
+
+### 6. NotebookLM Slide Deck
+
+- `scripts/build_featured_deck_source.py`를 실행한다.
+- 대표 기사 원문, Codex 선정 리포트, Codex 심층 리서치를 하나의 NotebookLM 소스로 묶어 `notebook_manifest.json`을 만든다.
+- `scripts/notebooklm_upload_sources.py`를 실행한다.
+- 새 NotebookLM 노트를 만들고 슬라이드용 소스만 업로드한 뒤 `ready` 상태를 기다린다.
+- `notebooklm_session.json`에 노트 ID와 업로드된 소스 ID를 저장한다.
 - `scripts/notebooklm_slide_deck.py`를 실행한다.
-- Q6과 기사 목록을 사용해 대표 기사를 고른다.
+- `featured_article.json`을 사용해 대표 기사를 고정한다.
 - `references/slide_prompt.md`의 메인 프롬프트로 5장 슬라이드 덱을 생성한다.
 - 슬라이드 1~5에 대해 `revise-slide`를 순차 적용해 구조를 보정한다.
 - 최종 덱을 PDF와 PPTX로 다운로드한다.
@@ -53,7 +63,6 @@
 - NotebookLM 로그인 또는 권한 확인 실패
 - 노트 생성 실패
 - 소스 업로드 또는 소스 `ready` 대기 실패
-- Q0~Q6 중 하나라도 실패
 - slide-deck 생성 또는 revise-slide 실패
 - PDF/PPTX 다운로드 실패
 
@@ -63,9 +72,12 @@
 
 - `candidates_raw.json`
 - `verified_articles.json`
+- `article_summaries.json`
+- `selection_report.json`
 - `notebook_manifest.json`
-- `notebooklm_outputs.json`
+- `notebooklm_session.json`
 - `featured_article.json`
+- `featured_research.md`
 - `slide_deck_artifact.json`
 - `news_<week_id>.html`
 - `news_slide_<week_id>.pdf`
@@ -79,6 +91,6 @@ At the start of every run, after choosing the target week and `<run_dir>`, run:
 python scripts/reset_week_outputs.py <run_dir>
 ```
 
-If `<run_dir>` does not exist, the script skips reset. If it exists, the script deletes only generated artifacts in `<run_dir>`: `search_queries.json`, `candidates_raw.json`, `verified_articles*.json`, `notebook_manifest.json`, `notebooklm_outputs.json`, `featured_article.json`, `slide_deck_artifact.json`, `notebooklm_failure.json`, `news_*.html`, `news_slide_*.pdf`, `news_slide_*.pptx`, `*.tmp`, and `sources/`. It leaves unrelated manual files alone. After reset, repeat the full workflow from scan through NotebookLM gate and slide-deck download.
+If `<run_dir>` does not exist, the script skips reset. If it exists, the script deletes only generated artifacts in `<run_dir>`: `search_queries.json`, `candidates_raw.json`, `verified_articles*.json`, `notebook_manifest.json`, `notebooklm_session.json`, `featured_article.json`, `selection_report.json`, `article_summaries.json`, `featured_research.md`, `featured_research.json`, `slide_deck_artifact.json`, `notebooklm_failure.json`, `news_*.html`, `news_slide_*.pdf`, `news_slide_*.pptx`, `*.tmp`, and `sources/`. It also deletes the legacy `notebooklm_outputs.json` if present. It leaves unrelated manual files alone. After reset, repeat the full workflow from scan through Codex selection, focused research, dashboard, and NotebookLM slide-deck download.
 
 If the user provides a preverified JSON input, keep that source file outside `<run_dir>` or write it back into `<run_dir>` only after reset.

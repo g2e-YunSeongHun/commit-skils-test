@@ -60,22 +60,84 @@
 ```json
 {
   "week_id": "26년_4월_1주차",
-  "notebook_title": "응급의료_AI_주간브리핑_26년_4월_1주차",
+  "notebook_title": "응급의료_AI_대표기사_슬라이드_26년_4월_1주차",
   "source_dir": "C:/.../sources",
   "sources": [
     {
-      "title": "01_응급의료_AI_기사",
-      "file_path": "C:/.../sources/01_응급의료_AI_기사.txt",
+      "title": "featured_응급의료_AI_기사",
+      "file_path": "C:/.../sources/featured_응급의료_AI_기사.txt",
       "section": "국내기사",
       "article_title": "응급의료 AI 기사",
       "date": "2026-04-01",
+      "link": "https://example.com/article",
+      "source_kind": "featured_deck_source"
+    }
+  ]
+}
+```
+
+## article_summaries.json
+
+```json
+[
+  {
+    "title": "응급의료 AI 기사",
+    "media": "매체명",
+    "date": "2026-04-01",
+    "section": "국내기사",
+    "summary": "Codex가 원문에서 추출한 요약",
+    "score": 84
+  }
+]
+```
+
+## selection_report.json
+
+```json
+{
+  "period": {
+    "start_date": "2026-03-28",
+    "end_date": "2026-04-03",
+    "generated_date": "2026-04-03"
+  },
+  "criteria": [
+    {
+      "id": "emergency_relevance",
+      "label": "응급의료 직접성",
+      "max_score": 20
+    }
+  ],
+  "featured_article": {
+    "title": "응급의료 AI 기사",
+    "score": 84
+  },
+  "candidates": [
+    {
+      "rank": 1,
+      "title": "응급의료 AI 기사",
+      "media": "매체명",
+      "date": "2026-04-01",
+      "section": "국내기사",
+      "score": 84,
+      "scores": {
+        "emergency_relevance": 20,
+        "ai_role": 18,
+        "field_impact": 16,
+        "source_completeness": 16,
+        "briefing_fit": 14
+      },
+      "evidence": {
+        "emergency_relevance": "확인 키워드: 응급실, EMS"
+      },
+      "limitations": [],
+      "summary": "기사 요약",
       "link": "https://example.com/article"
     }
   ]
 }
 ```
 
-## notebooklm_outputs.json
+## notebooklm_session.json
 
 ```json
 {
@@ -94,18 +156,11 @@
       "date": "2026-04-01",
       "link": "https://example.com/article"
     }
-  ],
-  "questions": [
-    {
-      "id": "Q6",
-      "note_title": "Q6_대표기사_26년_4월_1주차",
-      "question": "질문 원문",
-      "answer": "TITLE: 응급의료 AI 기사\nMEDIA: 매체명\nDATE: 2026-04-01\nREASON: ...",
-      "references": []
-    }
   ]
 }
 ```
+
+`notebooklm_session.json`은 `notebooklm_upload_sources.py`가 만든 세션 메타데이터이며 NotebookLM 분석 답변을 담지 않는다. 새 워크플로에서 NotebookLM은 슬라이드 생성만 담당한다.
 
 ## featured_article.json
 
@@ -118,8 +173,38 @@
   "related_org": "기관명",
   "link": "https://example.com/article",
   "reason": "대표 기사 선정 이유",
+  "score": 84,
+  "score_breakdown": {
+    "emergency_relevance": 20,
+    "ai_role": 18,
+    "field_impact": 16,
+    "source_completeness": 16,
+    "briefing_fit": 14
+  },
+  "selection_evidence": {
+    "emergency_relevance": "확인 키워드: 응급실, EMS"
+  },
+  "limitations": [],
   "source_id": "uuid"
 }
+```
+
+## featured_research.md
+
+```markdown
+# 대표 기사 심층 리서치
+
+## 확인한 사실
+
+- 기관/기업/제품/연구에 대한 추가 확인 내용과 URL.
+
+## 슬라이드 시사점
+
+- 슬라이드에 반영할 수 있는 산업적, 임상적, 운영적 의미.
+
+## 불확실한 지점
+
+- 소스만으로 확인하지 못한 내용.
 ```
 
 ## slide_deck_artifact.json
