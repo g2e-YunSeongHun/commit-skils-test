@@ -18,8 +18,9 @@ SECTION_MARKERS = {
     "slide_2": ("SLIDE_2_REVISION_START", "SLIDE_2_REVISION_END"),
     "slide_3": ("SLIDE_3_REVISION_START", "SLIDE_3_REVISION_END"),
     "slide_4": ("SLIDE_4_REVISION_START", "SLIDE_4_REVISION_END"),
-    "slide_5": ("SLIDE_5_REVISION_START", "SLIDE_5_REVISION_END"),
 }
+
+REVISION_SECTIONS = ("slide_1", "slide_2", "slide_3", "slide_4")
 
 
 class SlideDeckError(RuntimeError):
@@ -296,7 +297,7 @@ def main() -> None:
 
         revisions: list[dict] = []
         if not args.skip_revisions:
-            for slide_number, section_name in enumerate(("slide_1", "slide_2", "slide_3", "slide_4", "slide_5")):
+            for slide_number, section_name in enumerate(REVISION_SECTIONS):
                 prompt = fill_template(read_prompt_section(prompt_path, section_name), values)
                 result = revise_slide(notebook_id, artifact_id, slide_number, prompt)
                 wait_result = wait_for_artifact(notebook_id, result["artifact_id"], 900)

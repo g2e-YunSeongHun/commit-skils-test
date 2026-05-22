@@ -13,6 +13,12 @@ ARTICLE_SECTIONS = (
     ("국내기사", ("국내기사", "domestic_articles")),
     ("해외기사", ("해외기사", "overseas_articles")),
 )
+REQUIRED_RESEARCH_SECTIONS = (
+    "이번 주 핵심 팩트",
+    "AI 기술 설명",
+    "회사·기관 팩트시트",
+    "이번 주 인사이트",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -76,7 +82,24 @@ def read_optional_text(path_value: str) -> str:
     path = Path(path_value).resolve()
     if not path.exists():
         raise SystemExit(f"심층 리서치 파일을 찾지 못했습니다: {path}")
-    return path.read_text(encoding="utf-8-sig").strip()
+    text = path.read_text(encoding="utf-8-sig").strip()
+    validate_research_text(text, path)
+    return text
+
+
+def validate_research_text(text: str, path: Path) -> None:
+    if not text:
+        raise SystemExit(f"심층 리서치 파일이 비어 있습니다: {path}")
+    missing = []
+    for section in REQUIRED_RESEARCH_SECTIONS:
+        pattern = rf"^##\s*(?:\d+[\.\)]\s*)?{re.escape(section)}\s*$"
+        if not re.search(pattern, text, re.MULTILINE):
+            missing.append(section)
+    if missing:
+        raise SystemExit(
+            "featured_research.md 구조 검증 실패: "
+            f"{path}에 다음 섹션이 없습니다: {', '.join(missing)}"
+        )
 
 
 def public_selection_reason(featured: dict) -> str:

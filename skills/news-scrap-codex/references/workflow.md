@@ -38,8 +38,10 @@
 - Codex가 대표 기사에 대해 심층 리서치를 수행한다.
 - 리서치 대상은 대표 기사에 등장한 핵심 기관, 기업, 기술명, 제품명, 연구명이다.
 - 공식 발표, 논문, 제품 페이지, 규제·인허가 자료, 병원·기관 공지를 우선한다.
+- 리서치 구조는 최종 4장 슬라이드와 1:1로 맞춘다: `이번 주 핵심 팩트`, `AI 기술 설명`, `회사·기관 팩트시트`, `이번 주 인사이트`.
+- 각 섹션은 확인된 사실, 근거 URL, 소스에서 확인되지 않은 항목을 분리한다. 추론은 `이번 주 인사이트` 안에서만 시사점으로 작성한다.
 - 결과를 `<run_dir>/featured_research.md`에 한국어로 정리한다.
-- 리서치 내용에는 확인한 사실, 근거 URL, 슬라이드에 쓸 수 있는 시사점, 아직 불확실한 지점을 분리한다.
+- `scripts/build_featured_deck_source.py`는 `featured_research.md`에 위 4개 섹션이 없으면 실패한다.
 
 ### 5. Dashboard
 
@@ -58,8 +60,8 @@
 - `notebooklm_session.json`에 노트 ID와 업로드된 소스 ID를 저장한다.
 - `scripts/notebooklm_slide_deck.py`를 실행한다.
 - `featured_article.json`을 사용해 대표 기사를 고정한다.
-- `references/slide_prompt.md`의 메인 프롬프트로 5장 슬라이드 덱을 생성한다.
-- 슬라이드 1~5에 대해 `revise-slide`를 순차 적용해 구조를 보정한다.
+- `references/slide_prompt.md`의 메인 프롬프트로 4장 슬라이드 덱을 생성한다.
+- 슬라이드 1~4에 대해 `revise-slide`를 순차 적용해 구조를 보정한다.
 - 최종 덱을 PDF와 PPTX로 다운로드한다.
 
 ## 실패 규칙
