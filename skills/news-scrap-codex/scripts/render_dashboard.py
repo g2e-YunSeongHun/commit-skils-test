@@ -17,6 +17,14 @@ TAG_CLASS_MAP = {
     "정책": "tag-policy",
     "기술/제품": "tag-trend",
 }
+KOREAN_TEXT_KEYS = (
+    "요약",
+    "한국어요약",
+    "한글요약",
+    "번역요약",
+    "summary_ko",
+    "korean_summary",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -34,6 +42,22 @@ def get_text(data: dict, *keys: str) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
+
+
+def count_hangul(text: str) -> int:
+    return len(re.findall(r"[가-힣]", text or ""))
+
+
+def count_latin_words(text: str) -> int:
+    return len(re.findall(r"\b[A-Za-z][A-Za-z-]{2,}\b", text or ""))
+
+
+def looks_korean_summary(text: str) -> bool:
+    hangul_count = count_hangul(text)
+    latin_words = count_latin_words(text)
+    if hangul_count >= 20:
+        return True
+    return hangul_count >= 10 and latin_words <= 6
 
 
 def strip_citations(text: str) -> str:
@@ -112,7 +136,28 @@ def get_article_original_title(article: dict) -> str:
     return ""
 
 
-def render_article(article: dict) -> str:
+def get_article_summary(article: dict) -> str:
+    summary = get_text(article, *KOREAN_TEXT_KEYS, "summary")
+    if summary:
+        return first_sentences(summary, max_sentences=4, max_chars=700)
+    return first_sentences(get_text(article, "본문", "body", "content"), max_sentences=4, max_chars=700)
+
+
+def validate_summary_language(section: str, article: dict, summary: str) -> None:
+    if section != "해외기사":
+        return
+    if looks_korean_summary(summary):
+        return
+    title = get_article_title(article)
+    raise SystemExit(
+        "HTML 요약 한국어 검증 실패: "
+        f"해외기사 '{title}'의 대시보드 요약이 한국어로 보이지 않습니다. "
+        "Codex가 원문 요약을 한국어로 번역하고 자연스러운 문장으로 다듬은 뒤 "
+        "`요약` 또는 `summary_ko` 필드에 저장해야 합니다."
+    )
+
+
+def render_article(article: dict, section: str) -> str:
     title = esc(get_article_title(article))
     original_title = get_article_original_title(article)
     original_block = ""
@@ -127,8 +172,8 @@ def render_article(article: dict) -> str:
     related = esc(get_text(article, "관련기관", "related_org", "organization"))
     source_line = source if not related else f"{source} · {related}"
 
-    summary = first_sentences(get_text(article, "본문", "body", "content"), max_sentences=4, max_chars=700)
-    summary = clean_summary_text(summary)
+    summary = clean_summary_text(get_article_summary(article))
+    validate_summary_language(section, article, summary)
 
     link = get_text(article, "링크", "link", "url")
     link_block = ""
@@ -156,10 +201,10 @@ def render_article(article: dict) -> str:
 </details>"""
 
 
-def build_article_list(articles: list[dict]) -> str:
+def build_article_list(articles: list[dict], section: str) -> str:
     if not articles:
         return '<div class="empty-notice">수집된 기사가 없습니다.</div>'
-    return "\n\n".join(render_article(article) for article in articles)
+    return "\n\n".join(render_article(article, section) for article in articles)
 
 
 def render_template(template: str, replacements: dict[str, str]) -> str:
@@ -194,14 +239,14 @@ def main() -> None:
     domestic_articles, overseas_articles = collect_articles(verified)
 
     replacements = {
-        "{{page_title}}": "응급의료 AI 주간 브리핑",
+        "{{page_title}}": "의료 AI 주간 브리핑",
         "{{period}}": f'{esc(get_text(verified, "시작일"))} ~ {esc(get_text(verified, "종료일"))}',
         "{{generated_date}}": esc(get_text(verified, "생성일")),
         "{{total_count}}": str(len(domestic_articles) + len(overseas_articles)),
         "{{domestic_count}}": str(len(domestic_articles)),
         "{{overseas_count}}": str(len(overseas_articles)),
-        "{{domestic_articles}}": build_article_list(domestic_articles),
-        "{{overseas_articles}}": build_article_list(overseas_articles),
+        "{{domestic_articles}}": build_article_list(domestic_articles, "국내기사"),
+        "{{overseas_articles}}": build_article_list(overseas_articles, "해외기사"),
     }
 
     rendered = render_template(template, replacements)

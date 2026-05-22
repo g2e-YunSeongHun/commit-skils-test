@@ -28,23 +28,40 @@ EMERGENCY_KEYWORDS = (
     "trauma",
 )
 
+MEDICAL_CARE_KEYWORDS = (
+    "의료 ai",
+    "의료 인공지능",
+    "의료기기 ai",
+    "의료기기",
+    "의료 영상 ai",
+    "의료 영상",
+    "의료영상",
+    "진단 ai",
+    "판독 ai",
+    "중환자실",
+    "중환자의료",
+    "critical care",
+    "icu",
+    "intensive care",
+    "medical ai",
+    "medical device ai",
+    "medical imaging ai",
+    "diagnostic ai",
+    "radiology ai",
+    "healthcare ai",
+)
+
 ACUTE_DETERIORATION_KEYWORDS = (
-    "환자 악화",
-    "환자악화",
-    "임상 악화",
-    "악화 예측",
-    "중증화",
-    "입원 환자",
-    "일반 병동",
-    "병동 모니터링",
-    "조기경보",
-    "조기경보점수",
-    "early warning score",
-    "patient deterioration",
-    "clinical deterioration",
-    "acute deterioration",
-    "inpatient deterioration",
-    "ward monitoring",
+    "응급실 급성 악화",
+    "응급실 중증화",
+    "응급실 조기경보",
+    "중환자실 임상 악화",
+    "중환자실 급성 악화",
+    "중환자실 조기경보",
+    "icu early warning",
+    "critical care deterioration",
+    "emergency department deterioration",
+    "emergency department early warning",
 )
 
 AI_KEYWORDS = (
@@ -276,9 +293,12 @@ def score_article(article: dict) -> int:
 
     score = 0
     has_emergency_signal = contains_any(combined, EMERGENCY_KEYWORDS)
+    has_medical_care_signal = contains_any(combined, MEDICAL_CARE_KEYWORDS)
     has_deterioration_signal = contains_any(combined, ACUTE_DETERIORATION_KEYWORDS)
     if has_emergency_signal:
         score += 40
+    if has_medical_care_signal:
+        score += 32
     if has_deterioration_signal:
         score += 34
     if contains_any(combined, AI_KEYWORDS):
@@ -288,7 +308,7 @@ def score_article(article: dict) -> int:
         score += 12
     if contains_any(combined, OPERATIONS_KEYWORDS):
         score += 10
-    if contains_any(combined, ACUTE_USECASE_KEYWORDS) and (has_emergency_signal or has_deterioration_signal):
+    if contains_any(combined, ACUTE_USECASE_KEYWORDS) and (has_emergency_signal or has_medical_care_signal or has_deterioration_signal):
         score += 5
     if related_org:
         score += 5

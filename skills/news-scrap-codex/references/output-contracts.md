@@ -11,11 +11,12 @@
     {
       "기관/매체": "매체명",
       "관련기관": "기관명",
-      "적용분야": "응급의료",
+      "적용분야": "의료 AI",
       "구분": "도입/제휴",
       "번역제목": "기사 제목 한글 번역",
       "원제목": "Original English Title",
       "제목": "기사 제목",
+      "요약": "HTML 대시보드에 노출할 한국어 요약",
       "본문": "검증된 원문",
       "날짜": "2026-04-01",
       "링크": "https://example.com/article"
@@ -45,8 +46,8 @@
       "snippet": "검색 결과 스니펫",
       "section_guess": "domestic",
       "score": 71,
-      "matched_rules": ["emergency", "ai", "domestic_priority_domain"],
-      "query": "응급실 AI 인공지능 2026-04-04..2026-04-10",
+      "matched_rules": ["medical_care", "ai", "domestic_priority_domain"],
+      "query": "의료 AI 인공지능 2026-04-04..2026-04-10",
       "source": "search-engine",
       "published": "2026-04-09",
       "source_title": "MedicalTimes"
@@ -60,14 +61,14 @@
 ```json
 {
   "week_id": "26년_4월_1주차",
-  "notebook_title": "응급의료_AI_대표기사_슬라이드_26년_4월_1주차",
+  "notebook_title": "의료_AI_대표기사_슬라이드_26년_4월_1주차",
   "source_dir": "C:/.../sources",
   "sources": [
     {
-      "title": "featured_응급의료_AI_기사",
-      "file_path": "C:/.../sources/featured_응급의료_AI_기사.txt",
+      "title": "featured_의료_AI_기사",
+      "file_path": "C:/.../sources/featured_의료_AI_기사.txt",
       "section": "국내기사",
-      "article_title": "응급의료 AI 기사",
+      "article_title": "의료 AI 기사",
       "date": "2026-04-01",
       "link": "https://example.com/article",
       "source_kind": "featured_deck_source"
@@ -81,7 +82,7 @@
 ```json
 [
   {
-    "title": "응급의료 AI 기사",
+    "title": "의료 AI 기사",
     "media": "매체명",
     "date": "2026-04-01",
     "section": "국내기사",
@@ -103,18 +104,18 @@
   "criteria": [
     {
       "id": "emergency_relevance",
-      "label": "응급의료 직접성",
+      "label": "의료/응급/중환자의료 관련성",
       "max_score": 20
     }
   ],
   "featured_article": {
-    "title": "응급의료 AI 기사",
+    "title": "의료 AI 기사",
     "score": 84
   },
   "candidates": [
     {
       "rank": 1,
-      "title": "응급의료 AI 기사",
+      "title": "의료 AI 기사",
       "media": "매체명",
       "date": "2026-04-01",
       "section": "국내기사",
@@ -127,7 +128,7 @@
         "briefing_fit": 14
       },
       "evidence": {
-        "emergency_relevance": "확인 키워드: 응급실, EMS"
+        "emergency_relevance": "확인 키워드: 의료 AI, 중환자실 AI"
       },
       "limitations": [],
       "summary": "기사 요약",
@@ -144,15 +145,15 @@
   "week_id": "26년_4월_1주차",
   "notebook": {
     "id": "uuid",
-    "title": "응급의료_AI_주간브리핑_26년_4월_1주차"
+    "title": "의료_AI_주간브리핑_26년_4월_1주차"
   },
   "sources": [
     {
       "source_id": "uuid",
-      "title": "01_응급의료_AI_기사",
-      "file_path": "C:/.../sources/01_응급의료_AI_기사.txt",
+      "title": "01_의료_AI_기사",
+      "file_path": "C:/.../sources/01_의료_AI_기사.txt",
       "section": "국내기사",
-      "article_title": "응급의료 AI 기사",
+      "article_title": "의료 AI 기사",
       "date": "2026-04-01",
       "link": "https://example.com/article"
     }
@@ -162,11 +163,17 @@
 
 `notebooklm_session.json`은 `notebooklm_upload_sources.py`가 만든 세션 메타데이터이며 NotebookLM 분석 답변을 담지 않는다. 새 워크플로에서 NotebookLM은 슬라이드 생성만 담당한다.
 
+`build_featured_deck_source.py`가 만드는 NotebookLM 슬라이드용 source에는 `featured_article.json`과 `selection_report.json`의 내부 점수, 기준별 점수표, 후보 순위 비교, rubric을 포함하지 않는다. 점수는 내부 선정·디버깅용 산출물에만 남긴다.
+
+HTML 대시보드 요약은 `verified_articles.json`의 `요약`, `한국어요약`, `한글요약`, `번역요약`, `summary_ko`, `korean_summary`, `summary` 순서로 우선 사용한다. 해외 기사도 대시보드용 요약 필드는 한국어로 작성한다. 영어 요약을 만든 경우에는 HTML 렌더링 전에 한국어로 번역하고, 어색한 직역·과도한 영어 표현·원문 의미 누락이 없는지 검토한 결과만 `요약` 또는 `summary_ko`에 저장한다.
+
+`render_dashboard.py`는 해외기사 요약이 한국어로 보이지 않으면 실패한다. 실패 시 해당 기사 요약을 다시 번역·검토한 뒤 렌더링을 재실행한다.
+
 ## featured_article.json
 
 ```json
 {
-  "title": "응급의료 AI 기사",
+  "title": "의료 AI 기사",
   "media": "매체명",
   "date": "2026-04-01",
   "section": "국내기사",
@@ -182,7 +189,7 @@
     "briefing_fit": 14
   },
   "selection_evidence": {
-    "emergency_relevance": "확인 키워드: 응급실, EMS"
+    "emergency_relevance": "확인 키워드: 의료 AI, 중환자실 AI"
   },
   "limitations": [],
   "source_id": "uuid"
@@ -214,7 +221,7 @@
   "notebook_id": "uuid",
   "artifact_id": "uuid",
   "featured_article": {
-    "title": "응급의료 AI 기사"
+    "title": "의료 AI 기사"
   },
   "generation": {
     "status": "completed"

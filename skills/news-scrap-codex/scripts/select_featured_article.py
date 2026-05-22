@@ -15,7 +15,7 @@ ARTICLE_SECTIONS = (
 )
 
 CRITERIA = (
-    ("emergency_relevance", "응급의료 직접성"),
+    ("emergency_relevance", "의료/응급/중환자의료 관련성"),
     ("ai_role", "AI 역할 명확성"),
     ("field_impact", "도입/검증/제품화 구체성"),
     ("source_completeness", "소스 완결성"),
@@ -27,6 +27,13 @@ EMERGENCY_TERMS = (
     "중증", "외상", "심정지", "뇌졸중", "패혈증", "급성", "triage",
     "emergency", "emergency department", "ed", "ems", "ambulance", "trauma",
     "cardiac arrest", "stroke", "sepsis", "acute",
+)
+MEDICAL_CARE_TERMS = (
+    "의료 ai", "의료 인공지능", "의료기기 ai", "의료기기",
+    "의료 영상 ai", "의료 영상", "의료영상", "진단 ai", "판독 ai",
+    "중환자실", "중환자의료",
+    "critical care", "icu", "intensive care", "medical ai", "healthcare ai",
+    "medical device ai", "medical imaging ai", "diagnostic ai", "radiology ai",
 )
 AI_STRONG_TERMS = (
     "ai", "인공지능", "머신러닝", "딥러닝", "llm", "생성형", "챗gpt",
@@ -105,6 +112,19 @@ def article_body(article: dict) -> str:
     return get_text(article, "본문", "body", "content")
 
 
+def article_summary(article: dict) -> str:
+    return get_text(
+        article,
+        "요약",
+        "한국어요약",
+        "한글요약",
+        "번역요약",
+        "summary_ko",
+        "korean_summary",
+        "summary",
+    )
+
+
 def joined_article_text(article: dict) -> str:
     return "\n".join(
         [
@@ -152,6 +172,13 @@ def summarize_body(text: str, max_sentences: int = 4, max_chars: int = 650) -> s
     return summary
 
 
+def summarize_article(article: dict, max_sentences: int = 4, max_chars: int = 650) -> str:
+    summary = article_summary(article)
+    if summary:
+        return summarize_body(summary, max_sentences=max_sentences, max_chars=max_chars)
+    return summarize_body(article_body(article), max_sentences=max_sentences, max_chars=max_chars)
+
+
 def completeness_score(article: dict) -> int:
     if is_dead_page(article):
         return 0
@@ -190,6 +217,8 @@ def evidence_sentence(matches: list[str], fallback: str) -> str:
 def score_article(section: str, index: int, article: dict) -> dict:
     text = joined_article_text(article)
     emergency_matches = matched_terms(text, EMERGENCY_TERMS)
+    medical_care_matches = matched_terms(text, MEDICAL_CARE_TERMS)
+    relevance_matches = emergency_matches + medical_care_matches
     ai_strong_matches = matched_terms(text, AI_STRONG_TERMS)
     ai_support_matches = matched_terms(text, AI_SUPPORT_TERMS) if ai_strong_matches else []
     ai_matches = ai_strong_matches + ai_support_matches
@@ -201,13 +230,13 @@ def score_article(section: str, index: int, article: dict) -> dict:
     body = article_body(article)
     dead_page = is_dead_page(article)
 
-    emergency_bonus = 4 if "응급" in domain or "응급" in article_title(article) else 0
+    emergency_bonus = 4 if any(term in f"{domain}\n{article_title(article)}" for term in ("응급", "의료", "중환자")) else 0
     ai_bonus = 4 if matched_terms(article_title(article), AI_STRONG_TERMS) else 0
     impact_bonus = 3 if category in {"도입/제휴", "기술/제품", "정책"} else 0
 
     scores = {
         "emergency_relevance": points_from_matches(
-            emergency_matches, step=4, cap=20, bonus=emergency_bonus
+            relevance_matches, step=4, cap=20, bonus=emergency_bonus
         ),
         "ai_role": min(20, len(ai_strong_matches) * 6 + len(ai_support_matches) * 2 + ai_bonus),
         "field_impact": points_from_matches(
@@ -237,7 +266,7 @@ def score_article(section: str, index: int, article: dict) -> dict:
     if dead_page:
         limitations.append("본문이 오류 페이지 또는 유실 페이지로 보임")
     if scores["emergency_relevance"] < 8:
-        limitations.append("응급의료 직접성이 약함")
+        limitations.append("의료 AI 관련성이 약함")
     if scores["ai_role"] < 8:
         limitations.append("AI 기술 역할 설명이 부족함")
     if scores["field_impact"] < 8:
@@ -247,7 +276,7 @@ def score_article(section: str, index: int, article: dict) -> dict:
 
     total_score = sum(scores.values())
     evidence = {
-        "emergency_relevance": evidence_sentence(emergency_matches, "응급의료 직접 키워드가 뚜렷하지 않음"),
+        "emergency_relevance": evidence_sentence(relevance_matches, "의료 AI 관련 키워드가 뚜렷하지 않음"),
         "ai_role": evidence_sentence(ai_matches, "AI 기술 역할을 확인할 키워드가 부족함"),
         "field_impact": evidence_sentence(
             impact_matches + policy_matches,
@@ -272,7 +301,7 @@ def score_article(section: str, index: int, article: dict) -> dict:
         "scores": scores,
         "evidence": evidence,
         "limitations": limitations,
-        "summary": summarize_body(body),
+        "summary": summarize_article(article),
     }
 
 
@@ -280,12 +309,12 @@ def build_reason(candidate: dict) -> str:
     scores = candidate["scores"]
     if scores["emergency_relevance"] >= 8 and scores["ai_role"] >= 8:
         return (
-            f"{candidate['title']}은 응급의료 관련성, AI 역할, 현장 영향 근거가 함께 확인되어 "
-            f"총점 {candidate['score']}점으로 가장 높게 평가되었습니다."
+            f"{candidate['title']}은 의료 AI 관련성, AI 역할, 현장 영향 근거가 함께 확인되어 "
+            "주간 대표 기사로 선정되었습니다."
         )
     return (
-        f"{candidate['title']}은 전체 후보 중 총점 {candidate['score']}점으로 가장 높지만, "
-        "응급의료 AI 직접성이 충분하지 않아 조건부 대표 기사로 선정되었습니다."
+        f"{candidate['title']}은 내부 검토에서 주간 대표성이 가장 높게 평가되었지만, "
+        "의료 AI 관련성이 충분히 강하지 않아 조건부 대표 기사로 선정되었습니다."
     )
 
 

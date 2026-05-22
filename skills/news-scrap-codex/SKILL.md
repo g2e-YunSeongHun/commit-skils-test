@@ -1,30 +1,32 @@
 ---
 name: news-scrap-codex
-description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when creating a Korean weekly emergency-medicine AI news briefing where Codex searches, verifies, summarizes, selects one featured article with rule-based scoring, performs focused research, and NotebookLM is used only to generate the final slide deck.
+description: Codex용 의료·응급의료 AI 주간 뉴스 브리핑 스킬. Use when creating a Korean weekly medical AI briefing covering medical AI, emergency-medicine AI, emergency department AI, and ICU/critical-care AI, where Codex searches, verifies, summarizes, selects one featured article with rule-based scoring, performs focused research, and NotebookLM is used only to generate the final slide deck.
 ---
 
-# 응급의료 AI 뉴스 브리핑 for Codex
+# 의료·응급의료 AI 뉴스 브리핑 for Codex
 
 모든 출력은 한국어로 작성한다.
 
 ## 언제 이 스킬을 쓰는가
 
-- 주간 응급의료 AI 기사 브리핑을 만들어야 할 때
+- 주간 의료 AI, 응급의료 AI, 응급실 AI, 중환자실 AI 기사 브리핑을 만들어야 할 때
 - 국내/해외 기사 검증 후 `verified_articles.json`을 기준점으로 삼을 때
-- 기사, 현장 도입, 운영 개선, 제품 통합/제휴 중심으로 수집해야 할 때
+- 기사, 현장 도입, 운영 개선, 제품 통합/제휴, 의료기기·의료영상, 중환자의료 AI 중심으로 수집해야 할 때
 - NotebookLM은 최종 `slide-deck` 생성기로만 쓰고, 기사 판단은 Codex가 맡아야 할 때
 - 최종 슬라이드를 `python-pptx`가 아니라 NotebookLM `slide-deck`로 생성해야 할 때
 
 ## 핵심 규칙
 
 - 이 작업은 최신 기사에 의존하므로 기사 수집 단계에서는 반드시 웹 검색과 검증을 사용한다.
-- 국내 기사가 비어 보이면 바로 `0건`으로 확정하지 말고, `필수 도메인 순회`와 `진료 AI/급성 악화 예측/119·구급/문서화 축 보조 검색`을 먼저 수행한다.
+- 국내 기사가 비어 보이면 바로 `0건`으로 확정하지 말고, `필수 도메인 순회`와 `의료 AI/응급의료 AI/응급실 AI/중환자실 AI/의료기기·의료영상 AI 보조 검색`을 먼저 수행한다.
 - 기본 수집은 국내/해외 기사 원문 중심이다.
-- `트리아지`와 `급성 악화/중증화 예측 AI`는 진료 AI 축에 포함한다. `입원 환자 악화 예측`, `조기경보점수`, `병동 모니터링`은 응급실 이전 또는 중환자실 전 단계 위험 포착 기사로 검토한다. `병상·환자흐름·전원`과 일반 `소방 AI/로봇/위원회` 기사는 기본 국내 수집에서 제외하고, 사용자가 운영/정책 축을 명시할 때만 fallback으로 검토한다.
+- `의료 AI`, `의료기기 AI`, `의료 영상 AI`, `응급의료 AI`, `응급실 AI`, `중환자실/ICU AI`, `트리아지`는 기본 수집 축에 포함한다.
+- 일반 소방 AI/로봇/위원회 기사는 119·구급·응급의료 또는 의료기관 진료 맥락이 없으면 제외한다.
 - 해외 수집은 실제 도입·제품·제휴·인허가 기사를 우선한다.
 - 대표 기사 선정은 NotebookLM에 맡기지 않는다. Codex가 `select_featured_article.py`의 룰베이스 점수와 기사 맥락 검토를 함께 사용해 1건을 선정한다.
 - 대표 기사 선정 후 Codex가 해당 기사에 등장하는 핵심 기관, 기업, 기술, 연구를 추가 리서치해 `featured_research.md`로 정리한다.
 - NotebookLM은 Codex가 만든 대표 기사 소스와 슬라이드 가이드만 받아 slide-deck을 생성한다. NotebookLM에 주간 대표 기사 재선정이나 추가 리서치를 요청하지 않는다.
+- NotebookLM 슬라이드용 소스와 최종 PPT/PDF에는 내부 선정 점수, 기준별 점수표, 후보 순위 비교, rubric을 포함하지 않는다.
 - NotebookLM slide-deck 단계가 실패하면 전체 작업을 실패로 간주한다.
 - 새 실행마다 새 NotebookLM 노트를 만든다.
 - 최종 슬라이드는 [references/slide_prompt.md](references/slide_prompt.md)의 5장 구조와 디자인 가이드를 따른다.
@@ -38,6 +40,7 @@ description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when c
 - 이 파일이 없으면 Codex가 먼저 기사 수집, 중복 제거, 원문 검증을 수행해 같은 스키마로 고정한다.
 - 기사 수집 규칙과 건수 상한은 [references/search-rules.md](references/search-rules.md)를 따른다.
 - 영문 기사 제목은 가능하면 `번역제목`과 `원제목`을 함께 저장하고, HTML은 `번역제목`을 우선 노출한다.
+- HTML 대시보드에 노출될 기사 요약은 한국어로 작성한다. 원문이 영어여도 먼저 핵심 요약을 만든 뒤 한국어로 번역하고, 어색한 직역·영어 잔재·의미 누락이 없는지 검토해 `verified_articles.json`의 `요약` 또는 `summary_ko` 필드에 저장한다.
 - 스키마는 [references/output-contracts.md](references/output-contracts.md)를 따른다.
 
 ## 실행 순서
@@ -48,7 +51,7 @@ description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when c
 4. broad query, site-pass query, 수동 URL 목록 중 하나로 raw search hit JSON 또는 URL 목록을 준비한다.
 5. `python scripts/scan_candidates.py <input_json> --start-date YYYY-MM-DD --end-date YYYY-MM-DD --output <run_dir>/candidates_raw.json`로 정규화한다.
 6. `candidates_raw.json`의 후보 URL을 `python scripts/extract.py`로 검증한다.
-7. 검증된 기사만으로 `verified_articles.json`을 준비한다.
+7. 검증된 기사만으로 `verified_articles.json`을 준비한다. 각 기사에는 HTML 렌더링용 한국어 요약(`요약` 또는 `summary_ko`)을 넣는다. 해외 기사는 영어 요약을 그대로 넣지 말고 한국어 번역본을 자연스럽게 다듬은 뒤 사용한다.
 8. `python scripts/freeze_verified_articles.py <verified_json>`로 기사 순서와 건수 상한을 고정한다.
 9. `python scripts/select_featured_article.py <verified_json> --output-dir <run_dir>`로 대표 기사, 기사별 요약, 선정 리포트를 만든다.
 10. Codex가 대표 기사에 대해 심층 리서치를 수행하고 `<run_dir>/featured_research.md`에 정리한다. 리서치는 기사에 등장한 핵심 기관/기업/기술/연구의 공식 발표, 논문, 제품 페이지, 규제·인허가 자료를 우선한다.
@@ -78,13 +81,13 @@ description: Codex용 응급의료 AI 주간 뉴스 브리핑 스킬. Use when c
 - `scripts/select_featured_article.py`
   `verified_articles.json`에서 기사별 요약, 룰베이스 대표 기사 선정, 선정 리포트를 만든다.
 - `scripts/build_featured_deck_source.py`
-  대표 기사, 선정 리포트, Codex 심층 리서치, 원문을 하나의 NotebookLM slide-deck 소스로 묶는다.
+  대표 기사, 공개용 선정 배경, Codex 심층 리서치, 원문을 하나의 NotebookLM slide-deck 소스로 묶는다. 내부 점수와 후보 비교는 제외한다.
 - `scripts/notebooklm_upload_sources.py`
   새 노트를 만들고 슬라이드용 소스를 업로드한 뒤 `notebooklm_session.json`을 저장한다.
 - `scripts/reset_week_outputs.py`
   스킬 실행 시작 시 같은 주차 `<run_dir>`에 남아 있는 기존 생성물을 삭제한다.
 - `scripts/render_dashboard.py`
-  `verified_articles.json`에서 주간 HTML 대시보드를 만든다.
+  `verified_articles.json`에서 주간 HTML 대시보드를 만든다. 해외기사 대시보드 요약이 한국어로 보이지 않으면 실패한다.
 - `scripts/notebooklm_slide_deck.py`
   Codex가 선정한 `featured_article.json`을 기준으로 NotebookLM `slide-deck` 생성, `revise-slide`, PPTX/PDF 다운로드를 수행한다.
 
