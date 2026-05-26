@@ -169,6 +169,8 @@ HTML 대시보드 요약은 `verified_articles.json`의 `요약`, `한국어요�
 
 `render_dashboard.py`는 해외기사 요약이 한국어로 보이지 않으면 실패한다. 실패 시 해당 기사 요약을 다시 번역·검토한 뒤 렌더링을 재실행한다.
 
+HTML 산출물 파일명은 실행 구분 suffix를 제외한 주차 ID만 사용한다. 예를 들어 `<run_dir>` 또는 전달 파일명이 `26년_5월_1주차_codex`를 포함해도 최종 HTML 파일명은 `news_26년_5월_1주차.html`로 저장한다.
+
 ## featured_article.json
 
 ```json
@@ -266,6 +268,8 @@ HTML 대시보드 요약은 `verified_articles.json`의 `요약`, `한국어요�
   }
 }
 ```
+
+PDF/PPTX 산출물 파일명은 session `week_id`의 실행 구분 suffix를 제외한 주차 ID만 사용한다. 예를 들어 `week_id`가 `26년_5월_1주차_codex`여도 최종 파일명은 `news_slide_26년_5월_1주차.pdf`, `news_slide_26년_5월_1주차.pptx`로 저장한다.
 
 ## notebooklm_failure.json
 

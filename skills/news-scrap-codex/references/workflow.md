@@ -47,6 +47,7 @@
 
 - `scripts/render_dashboard.py`를 실행한다.
 - `verified_articles.json`만으로 `news_<week_id>.html`을 만든다.
+- HTML 산출물 파일명은 `news_26년_5월_1주차.html` 형식으로 정규화한다. `<run_dir>` 또는 전달 파일명에 `_codex` 같은 실행 구분 suffix가 있어도 최종 HTML 파일명에는 넣지 않는다.
 - 렌더러는 `요약`, `한국어요약`, `summary_ko`, `korean_summary`를 본문보다 우선 사용한다.
 - 해외기사 요약이 한국어로 보이지 않으면 렌더러가 실패한다. 이 경우 Codex가 해당 기사 요약을 다시 번역하고 어색한 직역, 과도한 영어 표현, 원문 의미 누락을 검토한 뒤 재실행한다.
 
@@ -63,6 +64,7 @@
 - `references/slide_prompt.md`의 메인 프롬프트로 4장 슬라이드 덱을 생성한다.
 - 슬라이드 1~4에 대해 `revise-slide`를 순차 적용해 구조를 보정한다.
 - 최종 덱을 PDF와 PPTX로 다운로드한다.
+- PDF/PPTX 산출물 파일명은 `news_slide_26년_5월_1주차.pdf`, `news_slide_26년_5월_1주차.pptx` 형식으로 정규화한다.
 
 ## 실패 규칙
 
@@ -85,9 +87,9 @@
 - `featured_article.json`
 - `featured_research.md`
 - `slide_deck_artifact.json`
-- `news_<week_id>.html`
-- `news_slide_<week_id>.pdf`
-- `news_slide_<week_id>.pptx`
+- `news_26년_5월_1주차.html`
+- `news_slide_26년_5월_1주차.pdf`
+- `news_slide_26년_5월_1주차.pptx`
 
 ## Run Directory Reset
 

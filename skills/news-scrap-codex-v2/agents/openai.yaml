@@ -1,0 +1,7 @@
+interface:
+  display_name: "의료·응급의료 뉴스 스크랩 Codex v2"
+  short_description: "의료 AI 기사 검색, Codex 구조화 MD 작성, Pencil MCP PDF 슬라이드 생성"
+  default_prompt: "Use $news-scrap-codex-v2 to create a Korean weekly medical AI briefing covering medical AI, emergency-medicine AI, emergency department AI, and ICU/critical-care AI. Codex should search, verify, summarize, write _work/news_briefing.md, render the final HTML, and use Pencil MCP to create the final 4-slide PDF."
+
+policy:
+  allow_implicit_invocation: true

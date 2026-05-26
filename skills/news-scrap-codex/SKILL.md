@@ -55,10 +55,10 @@ description: Codex용 의료·응급의료 AI 주간 뉴스 브리핑 스킬. Us
 8. `python scripts/freeze_verified_articles.py <verified_json>`로 기사 순서와 건수 상한을 고정한다.
 9. `python scripts/select_featured_article.py <verified_json> --output-dir <run_dir>`로 대표 기사, 기사별 요약, 선정 리포트를 만든다.
 10. Codex가 대표 기사에 대해 심층 리서치를 수행하고 `<run_dir>/featured_research.md`에 정리한다. 리서치는 기사에 등장한 핵심 기관/기업/기술/연구의 공식 발표, 논문, 제품 페이지, 규제·인허가 자료를 우선하며 [references/research_prompt.md](references/research_prompt.md)의 4개 섹션을 그대로 따른다.
-11. `python scripts/render_dashboard.py <verified_json> <run_dir>/news_<week_id>.html`로 HTML 대시보드를 만든다.
+11. `python scripts/render_dashboard.py <verified_json> <run_dir>/news_<week_id>.html`로 HTML 대시보드를 만든다. HTML 산출물 파일명은 `news_26년_5월_1주차.html` 형식으로 정규화하며, `<run_dir>` 또는 인자로 넘긴 파일명에 `_codex` 같은 실행 구분 suffix가 있어도 HTML 파일명에는 포함하지 않는다.
 12. `python scripts/build_featured_deck_source.py <verified_json> <run_dir>/featured_article.json <run_dir> --selection-report <run_dir>/selection_report.json --research-md <run_dir>/featured_research.md`로 NotebookLM 슬라이드용 단일 소스와 manifest를 만든다.
 13. `python scripts/notebooklm_upload_sources.py <run_dir>/notebook_manifest.json --output-dir <run_dir>`로 새 NotebookLM 노트에 슬라이드용 소스만 업로드한다.
-14. `python scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_session.json --featured-article-json <run_dir>/featured_article.json --output-dir <run_dir>`를 실행한다.
+14. `python scripts/notebooklm_slide_deck.py <run_dir>/notebooklm_session.json --featured-article-json <run_dir>/featured_article.json --output-dir <run_dir>`를 실행한다. PDF/PPTX 산출물 파일명은 `news_slide_26년_5월_1주차.pdf`, `news_slide_26년_5월_1주차.pptx` 형식으로 정규화한다.
 15. 결과물이 템플릿에서 벗어나면 `notebooklm_slide_deck.py`를 다시 실행하거나 NotebookLM `revise-slide`를 추가 적용한다.
 
 ## 무엇을 읽을지

@@ -134,7 +134,17 @@ def fill_template(template: str, values: dict[str, str]) -> str:
     return output
 
 
+def normalize_week_id(value: str) -> str:
+    match = re.search(r"(?P<year>\d{2})년[_\s-]*(?P<month>\d{1,2})월[_\s-]*(?P<week>\d{1,2})주차", str(value or ""))
+    if not match:
+        return ""
+    return f"{match.group('year')}년_{int(match.group('month'))}월_{int(match.group('week'))}주차"
+
+
 def safe_slug(value: str) -> str:
+    week_id = normalize_week_id(value)
+    if week_id:
+        return week_id
     tokens = re.findall(r"[0-9A-Za-z가-힣]+", value)
     slug = "_".join(tokens).strip("_")
     return slug or "slide_deck"
