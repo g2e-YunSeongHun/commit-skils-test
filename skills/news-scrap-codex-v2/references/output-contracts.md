@@ -48,20 +48,20 @@
 
 ## 대표 기사
 
-## 슬라이드 1. 이번 주 핵심 팩트
+## 슬라이드 1. 이번 주 대표 기사
 
-## 슬라이드 2. AI 기술 설명
+## 슬라이드 2. 제품 및 기술 설명
 
-## 슬라이드 3. 회사·기관 팩트시트
+## 슬라이드 3. 회사 및 기관 소개
 
-## 슬라이드 4. 이번 주 인사이트
+## 슬라이드 4. 기사 요약
 ```
 
 HTML 대시보드의 기사 요약은 `요약` 필드를 사용한다. 해외 기사도 `요약`은 한국어여야 하며, 영어 요약이 그대로 들어가면 렌더링 검증 실패로 처리한다.
 
-## Pencil Spec
+## Pencil Slide Plan
 
-`pencil_slide_spec.json`은 내부 작업 파일이다. Pencil MCP가 템플릿의 named text slot을 채울 때만 사용하고 최종 산출물로 남기지 않는다.
+`pencil_slide_spec.json`은 내부 작업 파일이다. Pencil MCP가 템플릿의 content frame 안에 본문 블록을 생성할 때만 사용하고 최종 산출물로 남기지 않는다.
 
 ```json
 {
@@ -70,21 +70,34 @@ HTML 대시보드의 기사 요약은 `요약` 필드를 사용한다. 해외 �
     "pdf_filename": "news_slide_26년_5월_1주차.pdf"
   },
   "template": {
-    "mode": "replace_named_text_slots",
-    "slot_name_pattern": "^slot\\.",
+    "mode": "populate_content_frames",
     "export_frame_names": [
-      "template.slide1.core_facts",
-      "template.slide2.ai_technology",
-      "template.slide3.company_fact_sheet",
-      "template.slide4.weekly_insight"
+      "template.slide1",
+      "template.slide2",
+      "template.slide3",
+      "template.slide4"
+    ],
+    "content_frame_names": [
+      "content.slide1",
+      "content.slide2",
+      "content.slide3",
+      "content.slide4"
     ]
   },
-  "template_slots": {
-    "slot.article.title": "대표 기사 제목",
-    "slot.slide1.title": "대표 기사 제목",
-    "slot.slide1.bullet1": "확인된 핵심 팩트"
-  }
+  "slides": [
+    {
+      "number": 1,
+      "title": "이번 주 대표 기사",
+      "content_frame_name": "content.slide1",
+      "layout": "article_overview",
+      "blocks": [
+        {"type": "headline", "text": "대표 기사 제목"},
+        {"type": "meta", "items": ["매체", "날짜", "기관"]},
+        {"type": "cards", "items": ["요약 카드 1", "요약 카드 2"]}
+      ]
+    }
+  ]
 }
 ```
 
-`template_slots`의 key는 Pencil text node의 `name`과 매칭하며 `content`만 업데이트한다.
+`blocks`는 Pencil MCP가 새 text/frame 요소로 배치할 의미 단위다. 템플릿에 미리 박힌 본문 slot에 강제로 넣지 않는다.

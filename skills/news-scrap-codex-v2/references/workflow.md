@@ -41,10 +41,11 @@
 
 ### 6. Pencil Slide PDF
 
-- `python scripts/build_pencil_slide_spec_from_md.py <work_dir>/news_briefing.md <work_dir> --week-id <week_id>`로 `<work_dir>/pencil_slide_spec.json`을 만든다.
+- `python scripts/build_pencil_slide_spec_from_md.py <work_dir>/news_briefing.md <work_dir> --week-id <week_id>`로 `<work_dir>/pencil_slide_spec.json` slide plan을 만든다.
 - `python scripts/prepare_pencil_template.py <work_dir> --spec-json <work_dir>/pencil_slide_spec.json`로 기준 Pencil 템플릿을 주차별 `.pen` 파일로 복사한다.
 - Pencil에서 주차별 `.pen` 파일을 열거나 Pencil MCP `open_document(path=...)`로 active editor로 만든다.
-- Pencil MCP로 `name`이 `slot.`으로 시작하는 text node를 찾아 `pencil_slide_spec.json.template_slots` 값으로 `content`만 업데이트한다.
+- Pencil MCP로 `content.slide1`~`content.slide4` frame을 찾고, 각 frame 안에 `pencil_slide_spec.json.slides[].blocks`를 새 text/frame/line 요소로 배치한다.
+- 같은 content frame 안에 이전 실행의 임시 child가 남아 있으면 먼저 삭제하고 다시 만든다.
 - slide frame 4개는 [pencil-template-contract.md](pencil-template-contract.md)의 frame name 계약을 따른다.
 - Pencil MCP `export_nodes(format="pdf")`로 4개 frame을 하나의 PDF로 export한다.
 - `python scripts/finalize_pencil_slide_pdf.py <exported_pdf> <run_dir> --spec-json <work_dir>/pencil_slide_spec.json --pen-file <work_dir>/news_slide_<week_id>.pen --work-dir <work_dir>`로 최종 파일명을 `news_slide_26년_5월_1주차.pdf`로 정규화하고 `<work_dir>`를 삭제한다.

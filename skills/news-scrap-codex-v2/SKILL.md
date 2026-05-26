@@ -12,7 +12,7 @@ description: Codex용 의료·응급의료 AI 주간 뉴스 브리핑 스킬. Us
 - 주간 의료 AI, 응급의료 AI, 응급실 AI, 중환자실 AI 기사 브리핑을 만들어야 할 때
 - Codex가 직접 웹 검색, 원문 검증, 기사 요약, 대표 기사 선정, 심층 리서치를 수행해야 할 때
 - 최종 산출물을 HTML 1개와 Pencil 기반 PDF 슬라이드 1개로만 남겨야 할 때
-- 고정된 4장 Pencil 템플릿의 slot text만 바꿔 팩트 기반 슬라이드를 만들어야 할 때
+- 고정된 4장 Pencil 템플릿의 빈 content 영역에 기사별 블록을 새로 배치해 팩트 기반 슬라이드를 만들어야 할 때
 
 ## 핵심 규칙
 
@@ -50,10 +50,10 @@ description: Codex용 의료·응급의료 AI 주간 뉴스 브리핑 스킬. Us
 7. 후보 URL은 `python scripts/extract.py`로 원문, 날짜, 본문을 확인한다.
 8. Codex가 검증된 기사, 한국어 요약, 대표 기사, 심층 리서치, 4장 슬라이드 내용을 `<work_dir>/news_briefing.md`로 작성한다. 구조는 [references/briefing-md-contract.md](references/briefing-md-contract.md)를 따른다.
 9. `python scripts/render_dashboard_from_md.py <work_dir>/news_briefing.md <run_dir>/news_<week_id>.html`로 HTML 대시보드를 만든다.
-10. `python scripts/build_pencil_slide_spec_from_md.py <work_dir>/news_briefing.md <work_dir> --week-id <week_id>`로 Pencil slot 값을 포함한 슬라이드 spec을 만든다.
+10. `python scripts/build_pencil_slide_spec_from_md.py <work_dir>/news_briefing.md <work_dir> --week-id <week_id>`로 Pencil content frame에 넣을 slide plan을 만든다.
 11. `python scripts/prepare_pencil_template.py <work_dir> --spec-json <work_dir>/pencil_slide_spec.json`로 기준 Pencil 템플릿을 주차별 작업 파일로 복사한다.
 12. 복사된 `<work_dir>/news_slide_<week_id>.pen` 파일을 Pencil에서 열거나 Pencil MCP `open_document(path=...)`로 active editor로 만든다.
-13. [references/pencil-template-contract.md](references/pencil-template-contract.md)에 따라 `slot.` text node의 `content`만 업데이트한다.
+13. [references/pencil-template-contract.md](references/pencil-template-contract.md)에 따라 `content.slide1`~`content.slide4` frame 안에 `pencil_slide_spec.json.slides[].blocks`를 배치한다.
 14. Pencil MCP `export_nodes(format="pdf")`로 slide frame 4개를 PDF로 export한다.
 15. `python scripts/finalize_pencil_slide_pdf.py <exported_pdf> <run_dir> --spec-json <work_dir>/pencil_slide_spec.json --pen-file <work_dir>/news_slide_<week_id>.pen --work-dir <work_dir>`로 PDF 파일명을 정규화하고 `_work`를 삭제한다.
 
@@ -73,7 +73,7 @@ description: Codex용 의료·응급의료 AI 주간 뉴스 브리핑 스킬. Us
 - `scripts/scan_candidates.py`: raw search hit 또는 URL 목록을 후보 JSON으로 정규화한다.
 - `scripts/extract.py`: 후보 URL의 본문과 발행일을 추출해 검증 단계에 사용한다.
 - `scripts/render_dashboard_from_md.py`: `news_briefing.md`에서 최종 HTML 대시보드를 만든다.
-- `scripts/build_pencil_slide_spec_from_md.py`: `news_briefing.md`에서 Pencil template slot 값을 만든다.
+- `scripts/build_pencil_slide_spec_from_md.py`: `news_briefing.md`에서 Pencil content frame에 배치할 slide plan을 만든다.
 - `scripts/prepare_pencil_template.py`: 기준 `.pen` 템플릿을 주차별 작업 파일로 복사한다.
 - `scripts/finalize_pencil_slide_pdf.py`: Pencil MCP가 export한 PDF를 `news_slide_<week_id>.pdf`로 정규화하고 기본적으로 `_work`를 삭제한다.
 - `scripts/reset_week_outputs.py`: 같은 주차 재실행 전에 기존 생성물을 삭제한다.

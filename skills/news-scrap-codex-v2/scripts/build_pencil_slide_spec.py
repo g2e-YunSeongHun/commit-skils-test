@@ -14,37 +14,43 @@ ARTICLE_SECTIONS = (
     ("해외기사", ("해외기사", "overseas_articles")),
 )
 REQUIRED_RESEARCH_SECTIONS = (
-    "이번 주 핵심 팩트",
-    "AI 기술 설명",
-    "회사·기관 팩트시트",
-    "이번 주 인사이트",
+    "이번 주 대표 기사",
+    "제품 및 기술 설명",
+    "회사 및 기관 소개",
+    "기사 요약",
 )
-MAX_TEMPLATE_BULLETS = 6
-MAX_TEMPLATE_SOURCES = 3
 SLIDE_DEFINITIONS = (
     {
-        "id": "core_facts",
-        "section": "이번 주 핵심 팩트",
-        "layout": "headline_fact_grid",
-        "visual": "핵심 팩트 3개와 발표·도입·제휴 관계를 보여주는 2열 표 또는 간단한 관계도",
+        "id": "featured_article",
+        "section": "이번 주 대표 기사",
+        "frame_name": "template.slide1",
+        "content_frame_name": "content.slide1",
+        "layout": "article_overview",
+        "visual": "대표 기사 제목, 매체, 날짜, 관련기관, 선정 이유가 보이는 요약 카드",
     },
     {
-        "id": "ai_technology",
-        "section": "AI 기술 설명",
+        "id": "product_technology",
+        "section": "제품 및 기술 설명",
+        "frame_name": "template.slide2",
+        "content_frame_name": "content.slide2",
         "layout": "workflow_diagram",
-        "visual": "입력 데이터 -> AI 처리 -> 현장 활용 흐름도",
+        "visual": "제품이나 기술이 해결하는 문제, 입력, 처리, 결과, 현장 사용 흐름",
     },
     {
-        "id": "company_fact_sheet",
-        "section": "회사·기관 팩트시트",
-        "layout": "fact_sheet",
-        "visual": "역할, 제품·역량, 파트너·도입, 검증 상태를 나누는 팩트시트",
+        "id": "company_institution",
+        "section": "회사 및 기관 소개",
+        "frame_name": "template.slide3",
+        "content_frame_name": "content.slide3",
+        "layout": "organization_profile",
+        "visual": "회사와 기관의 역할, 제품·역량, 파트너십·도입 상태를 나누는 소개",
     },
     {
-        "id": "weekly_insight",
-        "section": "이번 주 인사이트",
-        "layout": "insight_summary",
-        "visual": "시사점, 주의점, 불확실성, 추적 신호를 구분하는 요약 표",
+        "id": "article_summary",
+        "section": "기사 요약",
+        "frame_name": "template.slide4",
+        "content_frame_name": "content.slide4",
+        "layout": "article_summary",
+        "visual": "기사의 배경, 주요 내용, 의료 현장 의미, 한줄 정리를 자연스럽게 정리",
     },
 )
 
@@ -141,12 +147,55 @@ def compact_points(text: str, limit: int = 7) -> list[str]:
             continue
         line = re.sub(r"^[-*]\s*", "", line)
         line = re.sub(r"^\d+[\.\)]\s*", "", line).strip()
-        if not line or line in {"소스에서 확인 안 됨:", "확인 필요:"}:
+        if re.match(r"^제목\s*[:：]", line):
+            continue
+        if not line:
             continue
         points.append(line)
         if len(points) >= limit:
             break
     return points
+
+
+def parse_labeled_points(text: str) -> list[dict[str, str]]:
+    points: list[dict[str, str]] = []
+    for point in compact_points(text, limit=12):
+        match = re.match(r"^([^:：]{1,30})\s*[:：]\s*(.+)$", point)
+        if match:
+            label = match.group(1).strip()
+            value = match.group(2).strip()
+            if value:
+                points.append({"label": label, "text": value})
+        elif point:
+            points.append({"label": "", "text": point})
+    return points
+
+
+def find_labeled(points: list[dict[str, str]], *labels: str) -> str:
+    normalized_labels = {normalize(label) for label in labels}
+    for point in points:
+        if normalize(point.get("label", "")) in normalized_labels:
+            return point.get("text", "")
+    return ""
+
+
+def remaining_labeled(
+    points: list[dict[str, str]],
+    used_labels: set[str],
+    *,
+    limit: int = 6,
+) -> list[str]:
+    used = {normalize(label) for label in used_labels}
+    items: list[str] = []
+    for point in points:
+        label = point.get("label", "")
+        text = point.get("text", "")
+        if not text or normalize(label) in used:
+            continue
+        items.append(f"{label}: {text}" if label else text)
+        if len(items) >= limit:
+            break
+    return items
 
 
 def extract_urls(text: str) -> list[str]:
@@ -159,6 +208,81 @@ def extract_urls(text: str) -> list[str]:
             seen.add(cleaned)
             unique_urls.append(cleaned)
     return unique_urls[:6]
+
+
+def build_slide_blocks(number: int, featured_meta: dict, section_text: str) -> list[dict]:
+    points = parse_labeled_points(section_text)
+    if number == 1:
+        return [
+            {"type": "headline", "text": featured_meta.get("title", "")},
+            {
+                "type": "meta",
+                "items": [
+                    item
+                    for item in [
+                        featured_meta.get("media", ""),
+                        featured_meta.get("date", ""),
+                        featured_meta.get("related_org", ""),
+                        featured_meta.get("domain", ""),
+                    ]
+                    if item
+                ],
+            },
+            {
+                "type": "callout",
+                "label": "선정 이유",
+                "text": featured_meta.get("selection_reason", ""),
+            },
+            {
+                "type": "cards",
+                "items": remaining_labeled(points, {"대표 기사", "선정 이유", "근거"}, limit=3),
+            },
+        ]
+    if number == 2:
+        flow = [
+            {"label": "입력", "text": find_labeled(points, "입력 데이터")},
+            {"label": "처리", "text": find_labeled(points, "처리 방식", "AI 처리")},
+            {"label": "결과", "text": find_labeled(points, "출력 결과")},
+            {"label": "현장", "text": find_labeled(points, "현장 workflow 연결", "현장 연결")},
+        ]
+        return [
+            {
+                "type": "summary",
+                "label": "제품·기술",
+                "text": find_labeled(points, "제품·기술", "제품 및 기술") or featured_meta.get("domain", ""),
+            },
+            {
+                "type": "summary",
+                "label": "해결하려는 문제",
+                "text": find_labeled(points, "해결하려는 의료 문제"),
+            },
+            {"type": "flow", "items": [item for item in flow if item["text"]]},
+            {
+                "type": "bullets",
+                "items": remaining_labeled(
+                    points,
+                    {"제품·기술", "제품 및 기술", "해결하려는 의료 문제", "입력 데이터", "처리 방식", "AI 처리", "출력 결과", "현장 workflow 연결", "현장 연결", "근거"},
+                    limit=4,
+                ),
+            },
+        ]
+    if number == 3:
+        return [
+            {
+                "type": "headline",
+                "text": find_labeled(points, "회사·기관", "회사", "기관") or featured_meta.get("related_org", ""),
+            },
+            {
+                "type": "cards",
+                "items": remaining_labeled(points, {"회사·기관", "회사", "기관", "근거"}, limit=6),
+            },
+        ]
+    return [
+        {"type": "narrative", "label": "배경", "text": find_labeled(points, "배경")},
+        {"type": "narrative", "label": "주요 내용", "text": find_labeled(points, "주요 내용")},
+        {"type": "narrative", "label": "의료 현장 의미", "text": find_labeled(points, "의료 현장 의미")},
+        {"type": "takeaway", "text": find_labeled(points, "한줄 정리")},
+    ]
 
 
 def public_selection_reason(featured: dict) -> str:
@@ -192,7 +316,7 @@ def build_slides(featured_meta: dict, sections: dict[str, str]) -> list[dict]:
     for number, definition in enumerate(SLIDE_DEFINITIONS, start=1):
         section_title = definition["section"]
         section_text = sections[section_title]
-        slide_title = featured_meta["title"] if number == 1 else section_title
+        slide_title = section_title
         slides.append(
             {
                 "number": number,
@@ -201,58 +325,15 @@ def build_slides(featured_meta: dict, sections: dict[str, str]) -> list[dict]:
                 "section_title": section_title,
                 "layout": definition["layout"],
                 "visual_directive": definition["visual"],
+                "frame_name": definition["frame_name"],
+                "content_frame_name": definition["content_frame_name"],
                 "body": section_text,
                 "bullets": compact_points(section_text),
+                "blocks": build_slide_blocks(number, featured_meta, section_text),
                 "source_urls": extract_urls(section_text),
             }
         )
     return slides
-
-
-def value_at(values: list[str], index: int) -> str:
-    if index < len(values):
-        return values[index]
-    return ""
-
-
-def build_template_slots(
-    *,
-    featured_meta: dict,
-    slides: list[dict],
-    week_id: str,
-    period: dict,
-) -> dict[str, str]:
-    slots = {
-        "slot.deck.week_id": week_id,
-        "slot.deck.period": " ~ ".join(
-            value for value in (period.get("start_date", ""), period.get("end_date", "")) if value
-        ),
-        "slot.deck.generated_date": period.get("generated_date", ""),
-        "slot.article.title": featured_meta.get("title", ""),
-        "slot.article.media": featured_meta.get("media", ""),
-        "slot.article.date": featured_meta.get("date", ""),
-        "slot.article.org": featured_meta.get("related_org", ""),
-        "slot.article.domain": featured_meta.get("domain", ""),
-        "slot.article.category": featured_meta.get("category", ""),
-        "slot.article.link": featured_meta.get("link", ""),
-        "slot.article.selection_reason": featured_meta.get("selection_reason", ""),
-    }
-
-    for slide in slides:
-        number = int(slide["number"])
-        prefix = f"slot.slide{number}"
-        bullets = [str(item) for item in slide.get("bullets", [])]
-        sources = [str(item) for item in slide.get("source_urls", [])]
-        slots[f"{prefix}.section"] = str(slide.get("section_title", ""))
-        slots[f"{prefix}.title"] = str(slide.get("title", ""))
-        slots[f"{prefix}.layout"] = str(slide.get("layout", ""))
-        slots[f"{prefix}.visual"] = str(slide.get("visual_directive", ""))
-        slots[f"{prefix}.body"] = str(slide.get("body", ""))
-        for index in range(MAX_TEMPLATE_BULLETS):
-            slots[f"{prefix}.bullet{index + 1}"] = value_at(bullets, index)
-        for index in range(MAX_TEMPLATE_SOURCES):
-            slots[f"{prefix}.source{index + 1}"] = value_at(sources, index)
-    return slots
 
 
 def build_spec(
@@ -277,20 +358,25 @@ def build_spec(
             "pdf_filename": f"news_slide_{week_id}.pdf",
         },
         "template": {
-            "mode": "replace_named_text_slots",
+            "mode": "populate_content_frames",
             "recommended_template_name": "news-scrap-codex-v2 pencil slide template",
-            "slot_name_pattern": "^slot\\.",
             "required_slide_frame_names": [
-                "template.slide1.core_facts",
-                "template.slide2.ai_technology",
-                "template.slide3.company_fact_sheet",
-                "template.slide4.weekly_insight",
+                "template.slide1",
+                "template.slide2",
+                "template.slide3",
+                "template.slide4",
             ],
             "export_frame_names": [
-                "template.slide1.core_facts",
-                "template.slide2.ai_technology",
-                "template.slide3.company_fact_sheet",
-                "template.slide4.weekly_insight",
+                "template.slide1",
+                "template.slide2",
+                "template.slide3",
+                "template.slide4",
+            ],
+            "content_frame_names": [
+                "content.slide1",
+                "content.slide2",
+                "content.slide3",
+                "content.slide4",
             ],
         },
         "canvas": {
@@ -316,12 +402,6 @@ def build_spec(
             "output_format": "pdf_only",
         },
         "featured_article": featured_meta,
-        "template_slots": build_template_slots(
-            featured_meta=featured_meta,
-            slides=slides,
-            week_id=week_id,
-            period=period,
-        ),
         "slides": slides,
     }
 
