@@ -1,13 +1,12 @@
 # Pencil Template Contract
 
-`news-scrap-codex-v2`의 Pencil 출력은 반고정 템플릿 기반으로 운영한다. 템플릿은 디자인 톤, 제목, 여백, slide frame만 고정하고, 본문은 매 실행마다 `content.slideN` frame 안에 새로 배치한다.
+`news-scrap-codex-v2`의 Pencil 출력은 scaffold 템플릿 기반으로 운영한다. 템플릿은 디자인, 컬럼, 카드, 제목, 여백을 유지하고, 실행마다 바뀌는 값은 `bind.*` 이름이 붙은 text node의 `content`만 교체한다.
 
 ## 템플릿 전제
 
-- 템플릿은 `templates/news_slide_template.pen`에 둔다.
+- 템플릿은 `templates/news_slide_template.pen`이다.
 - 슬라이드는 정확히 4개 top-level frame이다.
-- 각 slide frame은 1280x720, 16:9 비율을 유지한다.
-- slide frame 이름은 아래 값을 사용한다.
+- 각 slide frame은 1280x720, 16:9 비율이다.
 
 | Slide | Frame name | Content frame |
 |---|---|---|
@@ -16,54 +15,96 @@
 | 3 | `template.slide3` | `content.slide3` |
 | 4 | `template.slide4` | `content.slide4` |
 
-## Fixed vs Generated
-
-고정 영역:
-
-- 왼쪽 accent bar
-- slide number
-- slide title
-- deck label
-- header rule
-- footer note
-
-생성 영역:
-
-- `content.slide1`
-- `content.slide2`
-- `content.slide3`
-- `content.slide4`
-
-본문 text node slot은 사용하지 않는다. Pencil MCP는 `pencil_slide_spec.json.slides[].blocks`를 읽고 해당 `content_frame_name` 안에 text, card, flow, callout 같은 요소를 새로 만든다.
-
-## Runtime Workflow
+## Runtime Contract
 
 1. `scripts/build_pencil_slide_spec_from_md.py`로 `news_briefing.md`에서 `pencil_slide_spec.json`을 만든다.
-2. `scripts/prepare_pencil_template.py`로 기준 Pencil 템플릿 `.pen` 파일을 주차별 작업 파일로 복사한다.
-3. Pencil에서 주차별 작업 `.pen` 파일을 열거나 Pencil MCP `open_document(path=...)`로 active editor로 둔다.
-4. Pencil MCP `batch_get`으로 frame node 중 `name`이 `content.slide1`~`content.slide4`인 node를 읽는다.
-5. 각 content frame에 기존 임시 child가 있으면 삭제한다.
-6. `pencil_slide_spec.json.slides[]`의 `blocks`를 해당 `content_frame_name` 안에 생성한다.
-7. 템플릿 slide frame 4개를 `export_nodes(format="pdf")`로 export한다.
-8. `scripts/finalize_pencil_slide_pdf.py`로 최종 PDF 이름을 정규화한다.
+2. `pencil_slide_spec.json.template.mode`는 `update_named_bindings`여야 한다.
+3. `scripts/prepare_pencil_template.py`로 기준 템플릿을 주차별 `.pen` 파일로 복사한다.
+4. `scripts/apply_pencil_bindings.py <weekly_pen_file> <pencil_slide_spec.json> --strict`로 `template_bindings`의 key와 같은 `name`을 가진 text node의 `content`를 교체한다.
+5. `content.slideN` 내부 scaffold child는 삭제하지 않는다.
+6. binding 값이 비어 있으면 해당 text node를 빈 문자열로 두고, 가능한 반복 카드 frame은 `enabled:false`로 숨긴다.
+7. 반복 binding은 템플릿의 최대 수용 개수일 뿐이다. 예를 들어 `point1~point3`, `capability1~capability4`, `offering1~offering3`은 확인된 항목 수만큼만 표시한다.
+8. 갱신된 `.pen` 파일을 Pencil에서 열고 `snapshot_layout(problemsOnly=true)`로 clipping을 확인한다.
+9. slide frame 4개를 `export_nodes(format="pdf")`로 export한다.
+10. `scripts/finalize_pencil_slide_pdf.py`로 최종 PDF 이름을 정규화한다.
 
-## Block Types
+## Binding Groups
 
-Pencil MCP는 아래 block type을 지원하는 최소 렌더링 규칙을 사용한다.
+### Slide 1
 
-- `headline`: 큰 제목 또는 주요 문장
-- `meta`: 매체, 날짜, 기관, 분야 같은 짧은 메타 정보
-- `callout`: 대표 기사 선정 이유처럼 강조해야 하는 문장
-- `cards`: 2~6개의 짧은 정보 카드
-- `summary`: label + text 형태의 설명 블록
-- `flow`: 입력, 처리, 결과, 현장 사용 흐름
-- `bullets`: 짧은 bullet 목록
-- `narrative`: 기사 요약용 label + 문장
-- `takeaway`: 마지막 한줄 정리
+- `bind.s1.category`
+- `bind.s1.headline`
+- `bind.s1.dek`
+- `bind.s1.body`
+- `bind.s1.point1`
+- `bind.s1.point2`
+- `bind.s1.point3`
+- `bind.s1.visual_note`
+
+### Slide 2
+
+- `bind.s2.product_name`
+- `bind.s2.one_liner`
+- `bind.s2.description`
+- `bind.s2.step1`
+- `bind.s2.step2`
+- `bind.s2.step3`
+- `bind.s2.capability1.title`
+- `bind.s2.capability1.detail`
+- `bind.s2.capability2.title`
+- `bind.s2.capability2.detail`
+- `bind.s2.capability3.title`
+- `bind.s2.capability3.detail`
+- `bind.s2.capability4.title`
+- `bind.s2.capability4.detail`
+
+### Slide 3
+
+- `bind.s3.logo_label`
+- `bind.s3.category`
+- `bind.s3.domain`
+- `bind.s3.name`
+- `bind.s3.tagline`
+- `bind.s3.description`
+- `bind.s3.founded`
+- `bind.s3.headquarters`
+- `bind.s3.scale`
+- `bind.s3.focus`
+- `bind.s3.offering1.title`
+- `bind.s3.offering1.detail`
+- `bind.s3.offering2.title`
+- `bind.s3.offering2.detail`
+- `bind.s3.offering3.title`
+- `bind.s3.offering3.detail`
+
+### Slide 4
+
+- `bind.s4.takeaway`
+- `bind.s4.dek`
+- `bind.s4.what.title`
+- `bind.s4.what.detail`
+- `bind.s4.why.title`
+- `bind.s4.why.detail`
+- `bind.s4.how.title`
+- `bind.s4.how.detail`
+- `bind.s4.fact1.label`
+- `bind.s4.fact1.value`
+- `bind.s4.fact1.detail`
+- `bind.s4.fact2.label`
+- `bind.s4.fact2.value`
+- `bind.s4.fact2.detail`
+- `bind.s4.fact3.label`
+- `bind.s4.fact3.value`
+- `bind.s4.fact3.detail`
+- `bind.s4.meaning1`
+- `bind.s4.meaning2`
+- `bind.s4.meaning3`
+- `bind.s4.source`
 
 ## Why This Shape
 
-- 디자인 톤과 4장 구성은 고정한다.
-- 실행마다 바뀌는 본문은 기사 내용에 맞춰 새로 배치한다.
-- `bullet1~bullet6` 같은 고정 slot에 억지로 끼워 넣지 않아 슬라이드가 더 자연스럽다.
-- Node ID가 바뀌어도 `name` 기반 content frame 검색으로 복구할 수 있다.
+- 디자인과 레이아웃은 안정적으로 유지된다.
+- 리서치 단계에서 필요한 데이터가 명확해져 슬라이드가 빈약해지는 문제를 줄인다.
+- 매번 새 block을 그리지 않으므로 카드 크기, 헤더, 여백이 흔들리지 않는다.
+- 내부 점수나 후보 정보는 템플릿 binding에 포함하지 않는다.
+- 반복 항목은 확인된 만큼만 노출하므로 템플릿 때문에 사실이 늘어나지 않는다.

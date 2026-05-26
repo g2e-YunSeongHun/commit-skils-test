@@ -1,103 +1,69 @@
 # Output Contracts
 
-## Final Artifacts
+## Final Outputs
 
-`news-scrap-codex-v2`의 최종 산출물은 `<run_dir>`에 아래 두 파일만 남긴다.
-
-```text
-<run_dir>/news_26년_5월_1주차.html
-<run_dir>/news_slide_26년_5월_1주차.pdf
-```
-
-- HTML 파일명은 `news_<week_id>.html` 형식이다.
-- PDF 파일명은 `news_slide_<week_id>.pdf` 형식이다.
-- `<run_dir>` 또는 임시 파일명에 `_codex` 같은 실행 구분 suffix가 있어도 최종 파일명에는 포함하지 않는다.
-- PPTX는 생성하지 않는다.
-- 내부 점수, 후보 순위, 스코어링 기준, rubric은 최종 HTML/PDF에 포함하지 않는다.
-
-## Work Directory
-
-작업용 파일은 `<work_dir> = <run_dir>/_work` 아래에서만 사용한다. 성공 후 `finalize_pencil_slide_pdf.py --work-dir <work_dir>`가 `_work`를 삭제하므로 최종 산출물로 남기지 않는다.
-
-대표적인 작업 파일은 아래와 같다.
+최종 산출물은 `<run_dir>`에 아래 두 개만 남긴다.
 
 ```text
-<work_dir>/search_queries.json
-<work_dir>/candidates_raw.json
-<work_dir>/news_briefing.md
-<work_dir>/pencil_slide_spec.json
-<work_dir>/news_slide_26년_5월_1주차.pen
+news_<week_id>.html
+news_slide_<week_id>.pdf
 ```
 
-`news_briefing.md`가 v2의 단일 작업 원본이다. 검색·검증·요약·대표 기사 선정·심층 리서치·슬라이드 문안은 모두 이 파일에 반영한다.
+예:
 
-디버깅이 필요하면 `finalize_pencil_slide_pdf.py`에 `--keep-work-dir`를 사용해 `_work`를 보존한다. 기본 운영에서는 보존하지 않는다.
-
-## Briefing Markdown
-
-`news_briefing.md`는 [briefing-md-contract.md](briefing-md-contract.md)의 구조를 따른다. 최소 섹션은 아래와 같다.
-
-```markdown
-# 의료 AI 주간 브리핑
-
-## 기간
-
-## 국내 기사
-
-## 해외 기사
-
-## 대표 기사
-
-## 슬라이드 1. 이번 주 대표 기사
-
-## 슬라이드 2. 제품 및 기술 설명
-
-## 슬라이드 3. 회사 및 기관 소개
-
-## 슬라이드 4. 기사 요약
+```text
+news_26년_5월_1주차.html
+news_slide_26년_5월_1주차.pdf
 ```
 
-HTML 대시보드의 기사 요약은 `요약` 필드를 사용한다. 해외 기사도 `요약`은 한국어여야 하며, 영어 요약이 그대로 들어가면 렌더링 검증 실패로 처리한다.
+`_work` 아래의 JSON, Markdown, `.pen` 파일은 작업용이다. 성공 후 삭제한다.
 
-## Pencil Slide Plan
+## HTML
 
-`pencil_slide_spec.json`은 내부 작업 파일이다. Pencil MCP가 템플릿의 content frame 안에 본문 블록을 생성할 때만 사용하고 최종 산출물로 남기지 않는다.
+- 입력: `<work_dir>/news_briefing.md`
+- 출력: `<run_dir>/news_<week_id>.html`
+- 해외 기사 제목은 번역 제목을 우선 사용한다.
+- 해외 기사 요약은 한국어여야 한다.
+- 내부 점수, 후보 순위, 스코어링 기준, rubric은 포함하지 않는다.
+
+## Pencil Spec
+
+`pencil_slide_spec.json`은 작업용 파일이며 최종 산출물로 남기지 않는다.
 
 ```json
 {
+  "schema_version": "1.1",
   "week_id": "26년_5월_1주차",
   "output": {
     "pdf_filename": "news_slide_26년_5월_1주차.pdf"
   },
   "template": {
-    "mode": "populate_content_frames",
+    "mode": "update_named_bindings",
+    "binding_name_pattern": "^bind\\.",
     "export_frame_names": [
       "template.slide1",
       "template.slide2",
       "template.slide3",
       "template.slide4"
     ],
-    "content_frame_names": [
-      "content.slide1",
-      "content.slide2",
-      "content.slide3",
-      "content.slide4"
-    ]
+    "empty_binding_policy": "empty_string_and_hide_parent_card_when_possible",
+    "repeating_binding_policy": "use_only_verified_items_up_to_template_capacity"
   },
-  "slides": [
-    {
-      "number": 1,
-      "title": "이번 주 대표 기사",
-      "content_frame_name": "content.slide1",
-      "layout": "article_overview",
-      "blocks": [
-        {"type": "headline", "text": "대표 기사 제목"},
-        {"type": "meta", "items": ["매체", "날짜", "기관"]},
-        {"type": "cards", "items": ["요약 카드 1", "요약 카드 2"]}
-      ]
-    }
-  ]
+  "template_bindings": {
+    "bind.s1.headline": "대표 기사 제목",
+    "bind.s2.product_name": "제품·기술명",
+    "bind.s3.name": "회사·기관명",
+    "bind.s4.takeaway": "기사 한 줄 정리"
+  }
 }
 ```
 
-`blocks`는 Pencil MCP가 새 text/frame 요소로 배치할 의미 단위다. 템플릿에 미리 박힌 본문 slot에 강제로 넣지 않는다.
+## PDF
+
+- 입력: 주차별 `.pen` 작업 파일
+- 출력: `<run_dir>/news_slide_<week_id>.pdf`
+- `.pen` 파일은 export 전에 `scripts/apply_pencil_bindings.py`로 갱신되어 있어야 한다.
+- PDF는 4장이어야 한다.
+- `bind.*` placeholder 텍스트가 그대로 남으면 실패로 본다.
+- 빈 반복 항목이 카드 형태로 남아 있으면 실패로 본다. 조사된 항목만 표시해야 한다.
+- layout clipping이 있으면 실패로 본다.

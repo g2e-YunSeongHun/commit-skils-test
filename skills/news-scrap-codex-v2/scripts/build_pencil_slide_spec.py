@@ -25,32 +25,28 @@ SLIDE_DEFINITIONS = (
         "section": "이번 주 대표 기사",
         "frame_name": "template.slide1",
         "content_frame_name": "content.slide1",
-        "layout": "article_overview",
-        "visual": "대표 기사 제목, 매체, 날짜, 관련기관, 선정 이유가 보이는 요약 카드",
+        "layout": "featured_article_scaffold",
     },
     {
         "id": "product_technology",
         "section": "제품 및 기술 설명",
         "frame_name": "template.slide2",
         "content_frame_name": "content.slide2",
-        "layout": "workflow_diagram",
-        "visual": "제품이나 기술이 해결하는 문제, 입력, 처리, 결과, 현장 사용 흐름",
+        "layout": "product_technology_scaffold",
     },
     {
         "id": "company_institution",
         "section": "회사 및 기관 소개",
         "frame_name": "template.slide3",
         "content_frame_name": "content.slide3",
-        "layout": "organization_profile",
-        "visual": "회사와 기관의 역할, 제품·역량, 파트너십·도입 상태를 나누는 소개",
+        "layout": "organization_profile_scaffold",
     },
     {
         "id": "article_summary",
         "section": "기사 요약",
         "frame_name": "template.slide4",
         "content_frame_name": "content.slide4",
-        "layout": "article_summary",
-        "visual": "기사의 배경, 주요 내용, 의료 현장 의미, 한줄 정리를 자연스럽게 정리",
+        "layout": "article_summary_scaffold",
     },
 )
 
@@ -69,12 +65,12 @@ def get_text(data: dict, *keys: str) -> str:
 
 
 def normalize(text: str) -> str:
-    return "".join(re.findall(r"[0-9A-Za-z가-힣]+", str(text or ""))).lower()
+    return re.sub(r"[^0-9A-Za-z가-힣]+", "", str(text or "")).lower()
 
 
 def normalize_week_id(value: str) -> str:
     match = re.search(
-        r"(?P<year>\d{2})년[_\s-]*(?P<month>\d{1,2})월[_\s-]*(?P<week>\d{1,2})주차",
+        r"(?P<year>\d{2})년?[_\s-]*(?P<month>\d{1,2})월?[_\s-]*(?P<week>\d{1,2})주차",
         str(value or ""),
     )
     if not match:
@@ -116,10 +112,10 @@ def find_featured_article(verified: dict, featured: dict) -> tuple[str, dict]:
 
 def parse_research_sections(path: Path) -> dict[str, str]:
     if not path.exists():
-        raise SystemExit(f"심층 리서치 파일을 찾지 못했습니다: {path}")
+        raise SystemExit(f"리서치 파일을 찾지 못했습니다: {path}")
     text = path.read_text(encoding="utf-8-sig").strip()
     if not text:
-        raise SystemExit(f"심층 리서치 파일이 비어 있습니다: {path}")
+        raise SystemExit(f"리서치 파일이 비어 있습니다: {path}")
 
     heading_pattern = re.compile(r"^##\s*(?:\d+[\.\)]\s*)?(.+?)\s*$", re.MULTILINE)
     matches = list(heading_pattern.finditer(text))
@@ -139,35 +135,27 @@ def parse_research_sections(path: Path) -> dict[str, str]:
     return sections
 
 
-def compact_points(text: str, limit: int = 7) -> list[str]:
-    points: list[str] = []
+def parse_labeled_points(text: str) -> list[dict[str, str]]:
+    points: list[dict[str, str]] = []
+    current_key = ""
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
+            current_key = ""
             continue
         line = re.sub(r"^[-*]\s*", "", line)
         line = re.sub(r"^\d+[\.\)]\s*", "", line).strip()
-        if re.match(r"^제목\s*[:：]", line):
-            continue
-        if not line:
-            continue
-        points.append(line)
-        if len(points) >= limit:
-            break
-    return points
-
-
-def parse_labeled_points(text: str) -> list[dict[str, str]]:
-    points: list[dict[str, str]] = []
-    for point in compact_points(text, limit=12):
-        match = re.match(r"^([^:：]{1,30})\s*[:：]\s*(.+)$", point)
+        match = re.match(r"^([^:：]{1,40})\s*[:：]\s*(.*)$", line)
         if match:
             label = match.group(1).strip()
             value = match.group(2).strip()
-            if value:
-                points.append({"label": label, "text": value})
-        elif point:
-            points.append({"label": "", "text": point})
+            points.append({"label": label, "text": value})
+            current_key = label
+            continue
+        if current_key and points:
+            points[-1]["text"] = f"{points[-1]['text']} {line}".strip()
+        else:
+            points.append({"label": "", "text": line})
     return points
 
 
@@ -175,27 +163,24 @@ def find_labeled(points: list[dict[str, str]], *labels: str) -> str:
     normalized_labels = {normalize(label) for label in labels}
     for point in points:
         if normalize(point.get("label", "")) in normalized_labels:
-            return point.get("text", "")
+            return point.get("text", "").strip()
     return ""
 
 
-def remaining_labeled(
-    points: list[dict[str, str]],
-    used_labels: set[str],
-    *,
-    limit: int = 6,
-) -> list[str]:
-    used = {normalize(label) for label in used_labels}
-    items: list[str] = []
-    for point in points:
-        label = point.get("label", "")
-        text = point.get("text", "")
-        if not text or normalize(label) in used:
-            continue
-        items.append(f"{label}: {text}" if label else text)
-        if len(items) >= limit:
-            break
-    return items
+def first_non_empty(*values: str) -> str:
+    for value in values:
+        if str(value or "").strip():
+            return str(value).strip()
+    return ""
+
+
+def source_line(featured_meta: dict) -> str:
+    parts = [
+        featured_meta.get("media", ""),
+        featured_meta.get("date", ""),
+        featured_meta.get("link", ""),
+    ]
+    return " · ".join(part for part in parts if part)
 
 
 def extract_urls(text: str) -> list[str]:
@@ -210,79 +195,94 @@ def extract_urls(text: str) -> list[str]:
     return unique_urls[:6]
 
 
+def compact_points(text: str, limit: int = 7) -> list[str]:
+    points: list[str] = []
+    for point in parse_labeled_points(text):
+        label = point.get("label", "")
+        body = point.get("text", "")
+        if not body:
+            continue
+        points.append(f"{label}: {body}" if label else body)
+        if len(points) >= limit:
+            break
+    return points
+
+
+def pair(points: list[dict[str, str]], title_key: str, detail_key: str, fallback_title: str = "") -> tuple[str, str]:
+    title = find_labeled(points, title_key, f"{title_key} 제목") or fallback_title
+    detail = find_labeled(points, detail_key, f"{title_key} 설명", f"{detail_key} 설명")
+    return title, detail
+
+
+def build_template_bindings(featured_meta: dict, sections: dict[str, str]) -> dict[str, str]:
+    s1 = parse_labeled_points(sections["이번 주 대표 기사"])
+    s2 = parse_labeled_points(sections["제품 및 기술 설명"])
+    s3 = parse_labeled_points(sections["회사 및 기관 소개"])
+    s4 = parse_labeled_points(sections["기사 요약"])
+
+    bindings = {
+        "bind.s1.category": first_non_empty(featured_meta.get("category", ""), featured_meta.get("domain", ""), "의료 AI"),
+        "bind.s1.headline": first_non_empty(find_labeled(s1, "기사 제목", "대표 기사"), featured_meta.get("title", "")),
+        "bind.s1.dek": first_non_empty(find_labeled(s1, "부제", "한 줄 요약", "한줄 요약"), featured_meta.get("selection_reason", "")),
+        "bind.s1.body": find_labeled(s1, "요약 본문", "확인된 내용", "주요 내용"),
+        "bind.s1.point1": find_labeled(s1, "핵심 포인트 1", "포인트 1"),
+        "bind.s1.point2": find_labeled(s1, "핵심 포인트 2", "포인트 2"),
+        "bind.s1.point3": find_labeled(s1, "핵심 포인트 3", "포인트 3"),
+        "bind.s1.visual_note": f"출처: {source_line(featured_meta)}",
+        "bind.s2.product_name": find_labeled(s2, "제품·기술", "제품 및 기술", "제품명", "기술명"),
+        "bind.s2.one_liner": find_labeled(s2, "한 줄 소개", "한줄 소개", "해결하려는 의료 문제"),
+        "bind.s2.description": find_labeled(s2, "설명", "제품 설명", "기술 설명"),
+        "bind.s2.step1": first_non_empty(find_labeled(s2, "작동 단계 1"), find_labeled(s2, "입력 데이터")),
+        "bind.s2.step2": first_non_empty(find_labeled(s2, "작동 단계 2"), find_labeled(s2, "처리 방식")),
+        "bind.s2.step3": first_non_empty(find_labeled(s2, "작동 단계 3"), find_labeled(s2, "출력 결과", "현장 workflow 연결")),
+        "bind.s3.category": first_non_empty(find_labeled(s3, "구분 태그"), featured_meta.get("category", "")),
+        "bind.s3.domain": first_non_empty(find_labeled(s3, "분야 태그"), featured_meta.get("domain", "")),
+        "bind.s3.logo_label": find_labeled(s3, "로고 라벨", "회사·기관", "회사 및 기관"),
+        "bind.s3.name": first_non_empty(find_labeled(s3, "회사·기관", "회사 및 기관"), featured_meta.get("related_org", "")),
+        "bind.s3.tagline": find_labeled(s3, "한 줄 소개", "한줄 소개", "역할"),
+        "bind.s3.description": find_labeled(s3, "설명", "회사 설명", "기관 설명", "제품·역량"),
+        "bind.s3.founded": find_labeled(s3, "설립"),
+        "bind.s3.headquarters": find_labeled(s3, "본사"),
+        "bind.s3.scale": find_labeled(s3, "규모"),
+        "bind.s3.focus": find_labeled(s3, "핵심 분야", "분야"),
+        "bind.s4.takeaway": find_labeled(s4, "한줄 정리", "한 줄 정리", "결론"),
+        "bind.s4.dek": find_labeled(s4, "보충 문장", "의료 현장 의미"),
+        "bind.s4.what.title": find_labeled(s4, "무엇 제목") or "무엇",
+        "bind.s4.what.detail": find_labeled(s4, "무엇 설명", "주요 내용"),
+        "bind.s4.why.title": find_labeled(s4, "왜 중요 제목") or "왜 중요",
+        "bind.s4.why.detail": find_labeled(s4, "왜 중요 설명", "의료 현장 의미"),
+        "bind.s4.how.title": find_labeled(s4, "어떻게 제목") or "어떻게",
+        "bind.s4.how.detail": find_labeled(s4, "어떻게 설명", "배경"),
+        "bind.s4.source": f"출처: {source_line(featured_meta)}",
+    }
+
+    for index in range(1, 5):
+        title, detail = pair(s2, f"기능 {index}", f"기능 {index} 설명")
+        bindings[f"bind.s2.capability{index}.title"] = title
+        bindings[f"bind.s2.capability{index}.detail"] = detail
+
+    for index in range(1, 4):
+        title, detail = pair(s3, f"제품·서비스 {index}", f"제품·서비스 {index} 설명")
+        bindings[f"bind.s3.offering{index}.title"] = title
+        bindings[f"bind.s3.offering{index}.detail"] = detail
+
+    for index in range(1, 4):
+        bindings[f"bind.s4.fact{index}.label"] = find_labeled(s4, f"요약 항목 {index} 라벨")
+        bindings[f"bind.s4.fact{index}.value"] = find_labeled(s4, f"요약 항목 {index} 값")
+        bindings[f"bind.s4.fact{index}.detail"] = find_labeled(s4, f"요약 항목 {index} 설명")
+        bindings[f"bind.s4.meaning{index}"] = find_labeled(s4, f"의료 현장 의미 {index}", f"의미 {index}")
+
+    return bindings
+
+
 def build_slide_blocks(number: int, featured_meta: dict, section_text: str) -> list[dict]:
-    points = parse_labeled_points(section_text)
+    points = compact_points(section_text)
     if number == 1:
         return [
             {"type": "headline", "text": featured_meta.get("title", "")},
-            {
-                "type": "meta",
-                "items": [
-                    item
-                    for item in [
-                        featured_meta.get("media", ""),
-                        featured_meta.get("date", ""),
-                        featured_meta.get("related_org", ""),
-                        featured_meta.get("domain", ""),
-                    ]
-                    if item
-                ],
-            },
-            {
-                "type": "callout",
-                "label": "선정 이유",
-                "text": featured_meta.get("selection_reason", ""),
-            },
-            {
-                "type": "cards",
-                "items": remaining_labeled(points, {"대표 기사", "선정 이유", "근거"}, limit=3),
-            },
+            {"type": "bullets", "items": points[:4]},
         ]
-    if number == 2:
-        flow = [
-            {"label": "입력", "text": find_labeled(points, "입력 데이터")},
-            {"label": "처리", "text": find_labeled(points, "처리 방식", "AI 처리")},
-            {"label": "결과", "text": find_labeled(points, "출력 결과")},
-            {"label": "현장", "text": find_labeled(points, "현장 workflow 연결", "현장 연결")},
-        ]
-        return [
-            {
-                "type": "summary",
-                "label": "제품·기술",
-                "text": find_labeled(points, "제품·기술", "제품 및 기술") or featured_meta.get("domain", ""),
-            },
-            {
-                "type": "summary",
-                "label": "해결하려는 문제",
-                "text": find_labeled(points, "해결하려는 의료 문제"),
-            },
-            {"type": "flow", "items": [item for item in flow if item["text"]]},
-            {
-                "type": "bullets",
-                "items": remaining_labeled(
-                    points,
-                    {"제품·기술", "제품 및 기술", "해결하려는 의료 문제", "입력 데이터", "처리 방식", "AI 처리", "출력 결과", "현장 workflow 연결", "현장 연결", "근거"},
-                    limit=4,
-                ),
-            },
-        ]
-    if number == 3:
-        return [
-            {
-                "type": "headline",
-                "text": find_labeled(points, "회사·기관", "회사", "기관") or featured_meta.get("related_org", ""),
-            },
-            {
-                "type": "cards",
-                "items": remaining_labeled(points, {"회사·기관", "회사", "기관", "근거"}, limit=6),
-            },
-        ]
-    return [
-        {"type": "narrative", "label": "배경", "text": find_labeled(points, "배경")},
-        {"type": "narrative", "label": "주요 내용", "text": find_labeled(points, "주요 내용")},
-        {"type": "narrative", "label": "의료 현장 의미", "text": find_labeled(points, "의료 현장 의미")},
-        {"type": "takeaway", "text": find_labeled(points, "한줄 정리")},
-    ]
+    return [{"type": "bullets", "items": points}]
 
 
 def public_selection_reason(featured: dict) -> str:
@@ -290,10 +290,7 @@ def public_selection_reason(featured: dict) -> str:
     if reason and not re.search(r"(총점|점수|score|\d+\s*점)", reason, re.IGNORECASE):
         return reason
     title = str(featured.get("title", "대표 기사")).strip() or "대표 기사"
-    return (
-        f"{title}은 의료 AI 관련성, AI 역할, 현장 적용 맥락, 소스 완결성을 "
-        "내부 검토한 결과 주간 대표 기사로 선정되었다."
-    )
+    return f"{title}는 의료 AI 관련성과 현장 적용 맥락이 분명해 이번 주 대표 기사로 선정했습니다."
 
 
 def build_featured_meta(featured: dict, article: dict, section: str) -> dict:
@@ -316,15 +313,13 @@ def build_slides(featured_meta: dict, sections: dict[str, str]) -> list[dict]:
     for number, definition in enumerate(SLIDE_DEFINITIONS, start=1):
         section_title = definition["section"]
         section_text = sections[section_title]
-        slide_title = section_title
         slides.append(
             {
                 "number": number,
                 "id": definition["id"],
-                "title": slide_title,
+                "title": section_title,
                 "section_title": section_title,
                 "layout": definition["layout"],
-                "visual_directive": definition["visual"],
                 "frame_name": definition["frame_name"],
                 "content_frame_name": definition["content_frame_name"],
                 "body": section_text,
@@ -349,8 +344,9 @@ def build_spec(
         "generated_date": get_text(verified, "생성일", "generated_date"),
     }
     slides = build_slides(featured_meta, research_sections)
+    template_bindings = build_template_bindings(featured_meta, research_sections)
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "generator": "news-scrap-codex-v2/scripts/build_pencil_slide_spec.py",
         "week_id": week_id,
         "period": period,
@@ -358,8 +354,9 @@ def build_spec(
             "pdf_filename": f"news_slide_{week_id}.pdf",
         },
         "template": {
-            "mode": "populate_content_frames",
+            "mode": "update_named_bindings",
             "recommended_template_name": "news-scrap-codex-v2 pencil slide template",
+            "binding_name_pattern": "^bind\\.",
             "required_slide_frame_names": [
                 "template.slide1",
                 "template.slide2",
@@ -378,6 +375,8 @@ def build_spec(
                 "content.slide3",
                 "content.slide4",
             ],
+            "empty_binding_policy": "empty_string_and_hide_parent_card_when_possible",
+            "repeating_binding_policy": "use_only_verified_items_up_to_template_capacity",
         },
         "canvas": {
             "width": 1280,
@@ -388,9 +387,8 @@ def build_spec(
             "background": "#FFFFFF",
             "text": "#1F2933",
             "muted_text": "#56616F",
-            "accent": "#155EEF",
-            "accent_secondary": "#0E9384",
-            "line": "#D9E2EC",
+            "accent": "#17617C",
+            "line": "#D8DDE3",
             "font": "Inter",
         },
         "source_policy": {
@@ -398,10 +396,10 @@ def build_spec(
             "use_only_verified_facts": True,
             "exclude_internal_scores": True,
             "exclude_candidate_rankings": True,
-            "mark_unknowns_as_unverified": True,
             "output_format": "pdf_only",
         },
         "featured_article": featured_meta,
+        "template_bindings": template_bindings,
         "slides": slides,
     }
 

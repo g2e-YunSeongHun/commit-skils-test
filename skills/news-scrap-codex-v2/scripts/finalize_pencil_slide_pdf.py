@@ -12,7 +12,7 @@ from pathlib import Path
 
 def normalize_week_id(value: str) -> str:
     match = re.search(
-        r"(?P<year>\d{2})년[_\s-]*(?P<month>\d{1,2})월[_\s-]*(?P<week>\d{1,2})주차",
+        r"(?P<year>\d{2})년?[_\s-]*(?P<month>\d{1,2})월?[_\s-]*(?P<week>\d{1,2})주차",
         str(value or ""),
     )
     if not match:

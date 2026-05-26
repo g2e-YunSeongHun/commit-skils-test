@@ -16,11 +16,11 @@ SLIDE_SECTION_NAMES = (
 
 
 def normalize_key(value: str) -> str:
-    return re.sub(r"[\s_:/·ㆍ\-.]+", "", value or "").lower()
+    return re.sub(r"[^0-9A-Za-z가-힣]+", "", value or "").lower()
 
 
 def normalize_text(value: str) -> str:
-    return "".join(re.findall(r"[0-9A-Za-z가-힣]+", value or "")).lower()
+    return normalize_key(value)
 
 
 def clean_article_heading(value: str) -> str:
@@ -47,9 +47,11 @@ def split_top_sections(text: str) -> dict[str, str]:
     return sections
 
 
-def find_section(sections: dict[str, str], *needles: str) -> str:
+def find_section(sections: dict[str, str], *needles: str, exclude_slide: bool = False) -> str:
     normalized_needles = [normalize_key(needle) for needle in needles]
     for title, body in sections.items():
+        if exclude_slide and normalize_key(title).startswith("슬라이드"):
+            continue
         normalized_title = normalize_key(title)
         if any(needle in normalized_title for needle in normalized_needles):
             return body
@@ -65,7 +67,7 @@ def parse_fields(block: str) -> dict[str, str]:
             current_key = ""
             continue
 
-        match = re.match(r"^(?:[-*]\s*)?([^:：]{1,30})\s*[:：]\s*(.*)$", line)
+        match = re.match(r"^(?:[-*]\s*)?([^:：]{1,40})\s*[:：]\s*(.*)$", line)
         if match:
             key = normalize_key(match.group(1))
             fields[key] = strip_markdown_link(match.group(2))
@@ -215,7 +217,7 @@ def parse_briefing_markdown(path: Path) -> dict:
     if not domestic and not overseas:
         raise SystemExit("news_briefing.md 구조 검증 실패: 국내 기사와 해외 기사가 모두 비어 있습니다.")
 
-    featured_body = find_section(sections, "대표 기사", "대표기사")
+    featured_body = find_section(sections, "대표 기사", "대표기사", exclude_slide=True)
     if not featured_body:
         raise SystemExit("news_briefing.md 구조 검증 실패: '대표 기사' 섹션이 없습니다.")
 
